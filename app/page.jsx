@@ -32,26 +32,26 @@ const STRIPE_OPTIONS = [0, 1, 2, 3];
 // ============================================================================
 
 const PROMPT = {
-  // 1. SUBJECT & ANGLE — locked for consistency across every render
-  subject: 'Three-quarter front view of a classic high-crown structured 5-panel trucker cap, photographed at a 30-degree angle from the front-right. Eye-level camera height. The cap is sitting upright on a flat surface, fully visible from front panel to side panel including the underside of the brim.',
+  // 1. SUBJECT & ANGLE
+  subject: 'Three-quarter front view of a high-crown structured 5-panel trucker cap, photographed at a 30-degree angle from the front-right, eye-level, sitting upright on a flat surface.',
 
-  // 2. CAP CONSTRUCTION — explicit boundary description fixes the foam/mesh confusion
-  construction: 'Construction: the front two panels are solid foam-backed twill fabric forming a single tall flat front face, divided by a clean vertical centre seam running from the brim up over the crown. The rear three panels (left side, right side, back) are clearly breathable mesh with visible woven texture. The boundary between the solid foam front and the mesh sides is a sharp clean vertical seam — the foam never bleeds into the mesh, and the mesh never bleeds onto the front. Pre-curved brim with a noticeable downward arc, finished underbrim. Small fabric-covered button (squatchee) at the very top centre of the crown.',
+  // 2. CAP CONSTRUCTION — explicit boundary description fixes foam/mesh confusion
+  construction: 'Construction: front two panels are solid foam-backed twill, divided by a clean vertical centre seam from brim to crown. The three rear panels (left, right, back) are clearly mesh with visible woven texture. Sharp clean vertical seam where foam meets mesh — foam never bleeds into mesh, mesh never onto front. Pre-curved brim with downward arc. Small fabric squatchee button on top centre.',
 
-  // 3. LOGO LOCKDOWN — aggressive language to stop the AI inventing or duplicating logos
-  logoLockdown: 'CRITICAL LOGO INSTRUCTION: The provided front design is the ONLY decoration on the front panel. Reproduce the provided design EXACTLY — same shapes, same colours, same proportions, same text characters, same letterforms. Do NOT invent, modify, redraw, stylise, or add to the logo in any way. Do NOT add any additional graphics, secondary logos, text, badges, patches, or decorative elements anywhere on the front panel beyond the provided design. Do NOT duplicate the logo. The logo is rendered as raised dimensional embroidery with visible thread texture and a soft shadow cast onto the cap fabric beneath it. Position the logo prominently across the centre of the front panel.',
+  // 3. LOGO LOCKDOWN — stops AI inventing or duplicating logos
+  logoLockdown: 'CRITICAL: the provided front design is the ONLY decoration on the front panel. Reproduce it EXACTLY — same shapes, colours, proportions, text characters. Do NOT invent, modify, redraw, stylise, or add to the logo. Do NOT add extra graphics, logos, text, badges, or patches anywhere. Do NOT duplicate the logo. Render as raised dimensional embroidery with visible thread texture and soft shadow on the fabric. Centre the logo on the front panel.',
 
-  // 4. NEGATIVE INSTRUCTIONS — folded into positive prompt since Nano Banana has no negative_prompt
-  avoid: 'Avoid: flat brim, low-profile cap, baseball cap fitted, dad hat, beanie, snapback closure visible from the front, mesh on the front panel, foam on the side panels, fabric bleeding between panels, multiple caps in frame, model wearing the cap, person, hands, mannequin, extra brims, busy background, cluttered scene, props, coloured background, harsh shadows, lens flare, cartoon style, illustration, painting, sketch, low resolution.',
+  // 4. NEGATIVE INSTRUCTIONS — folded in since Nano Banana has no negative_prompt field
+  avoid: 'Avoid: flat brim, low-profile, baseball or fitted cap, dad hat, snapback closure visible from front, mesh on front panel, foam on side panels, panel bleeding, multiple caps, model, person, hands, mannequin, extra brims, busy or coloured background, props, harsh shadows, lens flare, cartoon, illustration, sketch.',
 
   // 5. LIGHTING
-  lighting: 'Lighting: soft directional studio light from the upper-left, gentle shadows on the right side of the crown and a subtle shadow under the brim. No harsh highlights, no studio glare, no rim lighting, no coloured gels. Even soft-box quality light overall.',
+  lighting: 'Lighting: soft directional studio light from upper-left, gentle shadows on the right of the crown, subtle shadow under the brim. Soft-box quality, no glare, no rim lighting, no coloured gels.',
 
   // 6. BACKGROUND
-  background: 'Background: plain pure white seamless studio backdrop with a soft barely-perceptible gradient (slightly cooler near the bottom). A soft natural contact shadow sits directly beneath the cap where it meets the surface — diffuse, not hard-edged. Empty surface, no props, no clutter, no other objects in frame.',
+  background: 'Background: pure white seamless studio backdrop, barely-perceptible cool gradient near the bottom. Soft natural contact shadow directly beneath the cap, diffuse not hard-edged. No props, no other objects.',
 
   // 7. STYLE / QUALITY
-  style: 'Style: shot on 85mm lens at f/4 aperture, slight shallow depth of field with the entire cap fully sharp. Ultra high detail, fabric texture clearly visible, mesh weave clearly visible, embroidery thread depth visible. Ecommerce product photography aesthetic, clean catalogue look, mid-2020s commercial product listing style.',
+  style: 'Style: 85mm lens at f/4, shallow depth of field with the cap fully sharp. Ultra detail, fabric texture and mesh weave clearly visible, embroidery thread depth visible. Ecommerce product photography, clean catalogue look.',
 };
 
 export default function CapMockupGenerator() {
@@ -78,15 +78,15 @@ export default function CapMockupGenerator() {
   const canGenerate = !!designs.front && !generating;
 
   const buildPrompt = () => {
-    const colourLine = `Cap fabric colour: ${capColor}. The mesh side and back panels match this colour or sit one shade lighter. The brim is the same ${capColor} as the front panel.`;
+    const colourLine = `Cap fabric colour: ${capColor}. Mesh sides match this colour or one shade lighter. Brim same as front.`;
     const stripeLine = stripeCount === 0
-      ? 'No stripes on the side panels — clean unbroken mesh.'
-      : `${stripeCount} thin horizontal sewn-in ribbon stripe${stripeCount > 1 ? 's' : ''} running cleanly across both side mesh panels in the middle third of the panel height, evenly spaced and perfectly symmetrical on both sides. The stripes are flat ribbon tape sewn through the mesh (not embroidered lines, not painted on). Stripe colour should complement the ${capColor} cap — choose a tasteful contrasting tone (white, off-white, or a single accent colour) that looks like a classic athletic stripe.`;
+      ? 'No stripes — clean unbroken mesh on the side panels.'
+      : `${stripeCount} thin horizontal sewn-in ribbon stripe${stripeCount > 1 ? 's' : ''} across both side mesh panels in the middle third, evenly spaced and symmetrical. Flat ribbon tape sewn through the mesh (not embroidered, not painted). Stripe colour complements the ${capColor} cap — pick a tasteful contrasting tone (white, off-white, or single accent).`;
     const sideMentions = [];
-    if (designs.leftSide)  sideMentions.push('a smaller embroidered logo on the left side mesh panel, positioned near the front of the panel just behind the foam-mesh seam');
-    if (designs.rightSide) sideMentions.push('a smaller embroidered logo on the right side mesh panel, positioned near the front of the panel just behind the foam-mesh seam');
+    if (designs.leftSide)  sideMentions.push('smaller embroidered logo on the LEFT side mesh panel near the foam-mesh seam');
+    if (designs.rightSide) sideMentions.push('smaller embroidered logo on the RIGHT side mesh panel near the foam-mesh seam');
     const sideLogoLine = sideMentions.length > 0
-      ? `Additional decoration: ${sideMentions.join(', and ')}. Each side logo is reproduced exactly from its provided reference image with no invention or modification, embroidered to sit visually on top of any stripes.`
+      ? `Also: ${sideMentions.join(', and ')}. Each side logo reproduced exactly from its reference image, embroidered, sitting on top of any stripes.`
       : 'No side panel logos.';
 
     return [
