@@ -27,7 +27,7 @@ const PROMPT = {
 
   construction: 'Construction: a single continuous front face panel — one solid piece of structured fabric, NO visible vertical centre seam, smooth uninterrupted front from brim to crown. The three rear panels are clearly mesh with visible woven texture. Sharp clean vertical seam where the structured front meets the mesh sides. Pre-curved brim with downward arc and a clean smooth edge — NO visible stitching on the brim surface. Small fabric squatchee button on top centre.',
 
-  logoLockdown: 'CRITICAL: the provided front design is the ONLY decoration on the front panel. Reproduce it EXACTLY — same shapes, colours, proportions, text characters. Do NOT invent, modify, redraw, stylise, or add to the logo. Do NOT add extra graphics, logos, text, badges, or patches anywhere. Do NOT duplicate the logo. Render as raised dimensional embroidery with visible thread texture and soft shadow on the fabric. Centre the logo on the front panel.',
+  logoLockdown: 'CRITICAL: the provided front design is the ONLY decoration on the front panel. Reproduce it EXACTLY — same shapes, colours, proportions, text characters. Do NOT invent, modify, redraw, stylise, or add to the logo. Do NOT add extra graphics, logos, text, badges, or patches anywhere. Do NOT duplicate the logo. Render as highly detailed raised dimensional embroidery with visible thread texture and soft shadow on the fabric. Centre the logo on the front panel.',
 
   avoid: 'Avoid: flat brim, low-profile, baseball or fitted cap, dad hat, snapback closure visible from front, mesh on front panel, panel bleeding, multiple caps, model, person, hands, mannequin, extra brims, busy or coloured background, props, harsh shadows, lens flare, cartoon, illustration, sketch.',
 
@@ -45,7 +45,7 @@ const MODEL_TYPES = [
   {
     key: 'male',
     label: 'Men',
-    prompt: 'Portrait of a rugged Australian country man in his 30s wearing a trucker cap. He has a weathered, sun-tanned face and a relaxed confident expression. Wearing a simple work shirt. Standing outdoors in the Australian outback — red dirt, dry golden grass, sparse gum trees, clear blue sky with white clouds. The cap logo faces the camera and is clearly readable. Natural golden-hour sunlight. Shot on 85mm lens, shallow depth of field with the person and cap sharp, background softly blurred. Authentic rural Australian feel.',
+    prompt: 'Portrait of a rugged Australian country man in his 30s wearing a trucker cap. He has a weathered, sun-tanned face and a relaxed confident expression. Wearing a simple work shirt. Standing outdoors in the Australian outback — red dirt, dry golden grass, sparse gum trees, clear blue sky with white clouds. The cap logo is highly detailed 3D embroider facing the camera and is clearly readable. Natural golden-hour sunlight. Shot on 85mm lens, shallow depth of field with the person and cap sharp, background softly blurred. Authentic rural Australian feel.',
   },
   {
     key: 'female',
@@ -91,7 +91,7 @@ export default function CapMockupGenerator() {
     const colourLine = `Cap fabric colour: ${capColor}. Mesh sides match this colour or one shade lighter. Brim same as front.`;
     const stripeLine = stripeCount === 0
       ? 'No stripes — clean unbroken mesh on the side panels.'
-      : `${stripeCount} horizontal sewn-in flat ribbon stripe${stripeCount > 1 ? 's' : ''} on each side mesh panel, running parallel to the brim. Stripes tightly grouped — only 3-4mm gap between adjacent stripes, almost touching. Middle third of panel height, symmetrical on both sides. Flat ribbon tape through mesh. Stripe colour complements the ${capColor} cap.`;
+      : `${stripeCount} horizontal sewn-in flat ribbon stripe${stripeCount > 1 ? 's' : ''} on each side mesh panel, running parallel to the brim. Stripes tightly grouped — only 2mm gap between adjacent stripes, almost touching. Middle third of panel height, symmetrical on both sides. Flat ribbon tape through mesh. Stripe colour complements the ${capColor} cap.`;
     const sideMentions = [];
     if (designs.leftSide)  sideMentions.push('smaller embroidered logo on the LEFT side mesh panel near the foam-mesh seam');
     if (designs.rightSide) sideMentions.push('smaller embroidered logo on the RIGHT side mesh panel near the foam-mesh seam');
