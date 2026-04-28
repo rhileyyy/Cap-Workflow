@@ -7,8 +7,8 @@ const API_ENDPOINT = '/api/generate';
 
 const SIDES = [
   { key: 'front',     label: 'Front Panel', required: true,  placement: 'front panel, centered prominently' },
-  { key: 'leftSide',  label: 'Left Side',   required: false, placement: 'left side mesh panel as a smaller embroidered accent, sitting on top of any stripes' },
-  { key: 'rightSide', label: 'Right Side',  required: false, placement: 'right side mesh panel as a smaller embroidered accent, sitting on top of any stripes' },
+  { key: 'leftSide',  label: 'Left Side',   required: false, placement: 'left side mesh panel as a smaller highly detailed 3D embroidered accent, sitting on top of any stripes' },
+  { key: 'rightSide', label: 'Right Side',  required: false, placement: 'right side mesh panel as a smaller highly detailed 3D embroidered accent, sitting on top of any stripes' },
 ];
 
 const QUICK_COLORS = [
@@ -35,7 +35,7 @@ const PROMPT = {
 
   construction: 'Construction: a single continuous front face panel — one solid piece of structured fabric, NO visible vertical centre seam, smooth uninterrupted front from brim to crown. The three rear panels are clearly mesh with visible woven texture. Sharp clean vertical seam where the structured front meets the mesh sides. Pre-curved brim with downward arc and a clean smooth edge — NO visible decorative topstitching on the brim surface. Small fabric squatchee button on top centre. Visible snapback closure at the back.',
 
-  logoLockdown: 'CRITICAL: the provided front design is the ONLY decoration on the front panel. Reproduce it EXACTLY — same shapes, colours, proportions, text characters. Do NOT invent, modify, redraw, stylise, or add to the logo. Do NOT add extra graphics, logos, text, badges, or patches anywhere. Do NOT duplicate the logo. Render as raised dimensional embroidery with visible thread texture and soft shadow on the fabric. Centre the logo on the front panel.',
+  logoLockdown: 'CRITICAL: the provided front design is the ONLY decoration on the front panel. Reproduce it EXACTLY — same shapes, colours, proportions, text characters. Do NOT invent, modify, redraw, stylise, or add to the logo. Do NOT add extra graphics, logos, text, badges, or patches anywhere. Do NOT duplicate the logo. Render as highly detailed raised dimensional embroidery with visible thread texture and soft shadow on the fabric. Centre the logo on the front panel.',
 
   avoid: 'Avoid: flat brim, low-profile, baseball or fitted cap, dad hat, mesh on front panel, panel bleeding, multiple caps, model, person, hands, mannequin, extra brims, busy or coloured background, props, harsh shadows, lens flare, cartoon, illustration, sketch.',
 
@@ -125,10 +125,10 @@ export default function CapMockupGenerator() {
       ? 'No stripes — clean unbroken mesh on the side panels.'
       : `${stripeCount} horizontal sewn-in flat ribbon stripe${stripeCount > 1 ? 's' : ''} in colour ${stripeColor} on each side mesh panel, running parallel to the brim. Stripes tightly grouped — only 3-4mm gap between adjacent stripes, almost touching. Middle third of panel height, symmetrical on both sides. Flat ribbon tape through mesh.`;
     const sideMentions = [];
-    if (designs.leftSide)  sideMentions.push('smaller embroidered logo on the LEFT side mesh panel near the front-mesh seam');
-    if (designs.rightSide) sideMentions.push('smaller embroidered logo on the RIGHT side mesh panel near the front-mesh seam');
+    if (designs.leftSide)  sideMentions.push('smaller highly detailed 3D embroidered logo on the LEFT side mesh panel near the front-mesh seam');
+    if (designs.rightSide) sideMentions.push('smaller highly detailed 3D embroidered logo on the RIGHT side mesh panel near the front-mesh seam');
     const sideLogoLine = sideMentions.length > 0
-      ? `Also: ${sideMentions.join(', and ')}. Each side logo reproduced exactly, embroidered, sitting on top of any stripes.`
+      ? `Also: ${sideMentions.join(', and ')}. Each side logo reproduced exactly, 3D embroidered, sitting on top of any stripes.`
       : 'No side panel logos.';
 
     return [
