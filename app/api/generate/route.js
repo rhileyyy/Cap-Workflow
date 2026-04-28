@@ -57,7 +57,7 @@ export async function POST(request) {
 
       referenceImages.push({
         image: baseCapUrl,
-        text: 'BASE CAP REFERENCE — use this cap photo as the style, shape, angle, lighting, and construction template. Match the cap silhouette, brim curve, mesh texture, and camera angle exactly. REPLACE the logo on the front panel with the design from the next reference image.',
+        text: 'BASE CAP REFERENCE — use this cap photo as the style, shape, angle, lighting, and construction template. Match the cap silhouette, brim curve, mesh texture, and camera angle exactly. PLACE the logo on the front panel with the design from the next reference image.',
         mime_type: 'image/jpeg',
       });
 
