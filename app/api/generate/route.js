@@ -1,11 +1,10 @@
 // ============================================================================
 // /api/generate — Backend route handler
 // ----------------------------------------------------------------------------
-// 1. Receives the customer's logo files + prompt from the frontend
-// 2. Uploads each logo to Vercel Blob storage to get public URLs
-//    (Nano Banana Pro requires URLs for reference images, not base64)
-// 3. Calls Nano Banana Pro with prompt + up to 3 reference images
-// 4. Polls until the task completes, then returns the rendered image URL
+// Reference image allocation (Nano Banana Pro allows max 3):
+//   Slot 1: Base cap photo (always — from /public/cap-reference.jpg)
+//   Slot 2: Customer's front logo (always)
+//   Slot 3: Side logo if uploaded, OR duplicate of front logo for emphasis
 //
 // ENVIRONMENT VARIABLES (set these in your Vercel project settings):
 //   FREEPIK_API_KEY       — your Freepik API key
@@ -13,8 +12,9 @@
 // ============================================================================
 
 import { put } from '@vercel/blob';
+import { headers } from 'next/headers';
 
-export const maxDuration = 60; // allow up to 60s for the AI to render
+export const maxDuration = 60;
 
 export async function POST(request) {
   try {
@@ -25,56 +25,58 @@ export async function POST(request) {
     const formData = await request.formData();
     const prompt    = formData.get('prompt');
     const frontFile = formData.get('design_front');
-    const frontEmphasisFile = formData.get('design_front_emphasis');
     const leftFile  = formData.get('design_leftSide');
     const rightFile = formData.get('design_rightSide');
-    
+
     if (!prompt || !frontFile) {
       return jsonError('Missing prompt or front design.', 400);
     }
 
-    // 1. Upload logos to Vercel Blob → public URLs
-    // Each side becomes one entry in reference_images with a text label
-    // telling Nano Banana what role that image plays.
+    // ── Build the base URL for the public cap-reference image ──────────
+    // Next.js serves files in /public/ at the root URL automatically.
+    const headersList = await headers();
+    const host = headersList.get('host') || 'localhost:3000';
+    const protocol = host.includes('localhost') ? 'http' : 'https';
+    const baseCapUrl = `${protocol}://${host}/cap-reference.jpg`;
+
+    // ── Build reference_images array (max 3 slots) ────────────────────
     const referenceImages = [];
 
-   const frontUrl = await uploadToBlob(frontFile, 'front');
+    // SLOT 1: Base cap reference (always first — style anchor)
+    referenceImages.push({
+      image: baseCapUrl,
+      text: 'BASE CAP REFERENCE — use this cap photo as the style, shape, angle, lighting, and construction template. Match the cap silhouette, brim curve, mesh texture, and camera angle exactly. REPLACE the logo on the front panel with the design from the next reference image.',
+      mime_type: 'image/jpeg',
+    });
+
+    // SLOT 2: Customer's front logo (always second)
+    const frontUrl = await uploadToBlob(frontFile, 'front');
     referenceImages.push({
       image: frontUrl,
-      text: 'FRONT PANEL LOGO REFERENCE — copy this image pixel-by-pixel onto the cap front panel as a verbatim exact replica embroidered design. Do not invent or substitute.',
+      text: 'FRONT PANEL LOGO — copy this image pixel-by-pixel onto the cap front panel as a verbatim exact replica rendered as raised embroidery. This is the ONLY logo that should appear on the front panel. Do NOT invent or substitute any other design.',
       mime_type: frontFile.type || 'image/png',
     });
 
-    // Send the SAME front logo as a second reference under a different label.
-    // This nudges Nano Banana Pro to weight the logo reference more heavily
-    // and is a known trick for improving exact-copy fidelity.
-    if (frontEmphasisFile && frontEmphasisFile.size > 0) {
-      const frontEmphasisUrl = await uploadToBlob(frontEmphasisFile, 'front-emphasis');
+    // SLOT 3: Side logo if uploaded, otherwise duplicate front logo for emphasis
+    const sideFile = leftFile?.size > 0 ? leftFile : (rightFile?.size > 0 ? rightFile : null);
+    if (sideFile) {
+      const sideLabel = leftFile?.size > 0 ? 'left' : 'right';
+      const sideUrl = await uploadToBlob(sideFile, sideLabel);
       referenceImages.push({
-        image: frontEmphasisUrl,
-        text: 'EMPHASIS REFERENCE — same logo as the previous reference. The output cap front panel must contain THIS exact design, not a different one.',
-        mime_type: frontEmphasisFile.type || 'image/png',
+        image: sideUrl,
+        text: `SIDE PANEL LOGO — embroider this design as a smaller accent on the ${sideLabel} side mesh panel, positioned near the front of the panel. Reproduce exactly.`,
+        mime_type: sideFile.type || 'image/png',
       });
-    }
-    
-    if (leftFile && leftFile.size > 0) {
-      const leftUrl = await uploadToBlob(leftFile, 'left');
+    } else {
+      // No side logo — use slot 3 to re-emphasise the front logo
       referenceImages.push({
-        image: leftUrl,
-        text: 'Left side panel logo — embroider this design as a smaller accent on the LEFT side mesh panel only.',
-        mime_type: leftFile.type || 'image/png',
-      });
-    }
-    if (rightFile && rightFile.size > 0) {
-      const rightUrl = await uploadToBlob(rightFile, 'right');
-      referenceImages.push({
-        image: rightUrl,
-        text: 'Right side panel logo — embroider this design as a smaller accent on the RIGHT side mesh panel only.',
-        mime_type: rightFile.type || 'image/png',
+        image: frontUrl,
+        text: 'EMPHASIS — same logo as slot 2. The front panel MUST display this exact design. Do not substitute, redraw, or invent a different logo.',
+        mime_type: frontFile.type || 'image/png',
       });
     }
 
-    // 2. Submit to Nano Banana Pro
+    // ── Submit to Nano Banana Pro ─────────────────────────────────────
     const submitResp = await fetch('https://api.freepik.com/v1/ai/text-to-image/nano-banana-pro', {
       method: 'POST',
       headers: {
@@ -101,7 +103,7 @@ export async function POST(request) {
       return jsonError('Freepik response had no task_id', 502);
     }
 
-    // 3. Poll for completion (max ~55 seconds — leave headroom under maxDuration)
+    // ── Poll for completion ──────────────────────────────────────────
     for (let i = 0; i < 55; i++) {
       await sleep(1000);
       const statusResp = await fetch(
@@ -109,7 +111,7 @@ export async function POST(request) {
         { headers: { 'x-freepik-api-key': process.env.FREEPIK_API_KEY } }
       );
 
-      if (!statusResp.ok) continue; // transient error, just keep polling
+      if (!statusResp.ok) continue;
 
       const statusData = await statusResp.json();
       const status = statusData.data?.status;
@@ -134,8 +136,6 @@ export async function POST(request) {
 // ── Helpers ────────────────────────────────────────────────────────────────
 
 async function uploadToBlob(file, label) {
-  // Random suffix avoids name collisions; addRandomSuffix already does this
-  // but we add the label too for easier debugging in the Blob dashboard.
   const blob = await put(`logos/${label}-${file.name}`, file, {
     access: 'public',
     addRandomSuffix: true,

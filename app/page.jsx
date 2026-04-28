@@ -34,13 +34,13 @@ const STRIPE_OPTIONS = [0, 1, 2, 3];
 const PROMPT = {
   // 1. SUBJECT & ANGLE
   subject: 'Three-quarter front view of a high-crown structured 5-panel trucker cap, photographed at a 30-degree angle from the front-right, eye-level, sitting upright on a flat surface.',
-  
-  // 2. CAP CONSTRUCTION
-  construction: 'Construction: a structured trucker cap with a single continuous front face panel — one solid piece of fabric, NO visible vertical centre seam, smooth uninterrupted front from brim to crown. The three rear panels are clearly mesh with visible woven texture. Sharp clean vertical seam where the structured front meets the mesh sides. Pre-curved brim with downward arc and a clean smooth edge — NO visible decorative topstitching on the brim surface. Small fabric squatchee button on top centre.',
-  
-  // 3. LOGO
-  logoLockdown: 'CRITICAL LOGO INSTRUCTION (REPEAT 3X FOR EMPHASIS): The provided front reference image IS the logo. Copy it pixel-by-pixel onto the front panel as a verbatim exact replica. Do NOT invent, redraw, restyle, reinterpret, or substitute any other design. Do NOT add extra logos, text, badges, patches, or graphics. Do NOT duplicate the logo. The reference image content must appear on the front panel exactly as provided — same shapes, same colours, same letterforms. Render as raised dimensional embroidery with thread texture and soft shadow.',
-  
+
+  // 2. CAP CONSTRUCTION — explicit boundary description fixes foam/mesh confusion
+  construction: 'Construction: front two panels are solid foam-backed twill, divided by a clean vertical centre seam from brim to crown. The three rear panels (left, right, back) are clearly mesh with visible woven texture. Sharp clean vertical seam where foam meets mesh — foam never bleeds into mesh, mesh never onto front. Pre-curved brim with downward arc. Small fabric squatchee button on top centre.',
+
+  // 3. LOGO LOCKDOWN — stops AI inventing or duplicating logos
+  logoLockdown: 'CRITICAL: the provided front design is the ONLY decoration on the front panel. Reproduce it EXACTLY — same shapes, colours, proportions, text characters. Do NOT invent, modify, redraw, stylise, or add to the logo. Do NOT add extra graphics, logos, text, badges, or patches anywhere. Do NOT duplicate the logo. Render as raised dimensional embroidery with visible thread texture and soft shadow on the fabric. Centre the logo on the front panel.',
+
   // 4. NEGATIVE INSTRUCTIONS — folded in since Nano Banana has no negative_prompt field
   avoid: 'Avoid: flat brim, low-profile, baseball or fitted cap, dad hat, snapback closure visible from front, mesh on front panel, foam on side panels, panel bleeding, multiple caps, model, person, hands, mannequin, extra brims, busy or coloured background, props, harsh shadows, lens flare, cartoon, illustration, sketch.',
 
@@ -115,7 +115,6 @@ export default function CapMockupGenerator() {
       formData.append('stripeCount', String(stripeCount));
       formData.append('prompt', buildPrompt());
       formData.append('design_front', designs.front.file);
-      formData.append('design_front_emphasis', designs.front.file);
       if (designs.leftSide)  formData.append('design_leftSide',  designs.leftSide.file);
       if (designs.rightSide) formData.append('design_rightSide', designs.rightSide.file);
 
