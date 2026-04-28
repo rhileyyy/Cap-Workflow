@@ -1,16 +1,12 @@
 'use client';
 
 import { useState, useRef, useEffect, useMemo } from 'react';
-import { Upload, Check, Loader2, RefreshCw, Sparkles, AlertTriangle } from 'lucide-react';
+import { Upload, Check, Loader2, RefreshCw, Sparkles, Users } from 'lucide-react';
 
-// ============================================================================
-// On Next.js the backend lives at /api/generate on the same domain — so we
-// just hit that path directly. No URL config needed.
-// ============================================================================
 const API_ENDPOINT = '/api/generate';
 
 const SIDES = [
-  { key: 'front',     label: 'Front Panel', required: true,  placement: 'front foam panel, centered prominently' },
+  { key: 'front',     label: 'Front Panel', required: true,  placement: 'front panel, centered prominently' },
   { key: 'leftSide',  label: 'Left Side',   required: false, placement: 'left side mesh panel as a smaller embroidered accent, sitting on top of any stripes' },
   { key: 'rightSide', label: 'Right Side',  required: false, placement: 'right side mesh panel as a smaller embroidered accent, sitting on top of any stripes' },
 ];
@@ -24,35 +20,44 @@ const QUICK_COLORS = [
 const STRIPE_OPTIONS = [0, 1, 2, 3];
 
 // ============================================================================
-// PROMPT TEMPLATE — the language sent to the image engine for every preview.
-// Each block is labelled so you can refine bits independently.
-//
-// IMPORTANT: The image engine does NOT support a separate negative_prompt.
-// All "do not do X" instructions are folded into the positive prompt below.
+// PRODUCT SHOT PROMPT — used for the flat product preview
 // ============================================================================
-
 const PROMPT = {
-  // 1. SUBJECT & ANGLE
-  subject: 'Three-quarter front view of a high-crown structured 5-panel trucker cap, photographed at a 30-degree angle from the front-right, eye-level, sitting upright on a flat surface.',
+  subject: 'Three-quarter front view of a high-crown structured trucker cap, photographed at a 30-degree angle from the front-right, eye-level, sitting upright on a flat surface.',
 
-  // 2. CAP CONSTRUCTION — explicit boundary description fixes foam/mesh confusion
-  construction: 'Construction: front two panels are solid foam-backed twill, divided by a clean vertical centre seam from brim to crown. The three rear panels (left, right, back) are clearly mesh with visible woven texture. Sharp clean vertical seam where foam meets mesh — foam never bleeds into mesh, mesh never onto front. Pre-curved brim with downward arc. Small fabric squatchee button on top centre.',
+  construction: 'Construction: a single continuous front face panel — one solid piece of structured fabric, NO visible vertical centre seam, smooth uninterrupted front from brim to crown. The three rear panels are clearly mesh with visible woven texture. Sharp clean vertical seam where the structured front meets the mesh sides. Pre-curved brim with downward arc and a clean smooth edge — NO visible decorative topstitching on the brim surface. Small fabric squatchee button on top centre.',
 
-  // 3. LOGO LOCKDOWN — stops AI inventing or duplicating logos
   logoLockdown: 'CRITICAL: the provided front design is the ONLY decoration on the front panel. Reproduce it EXACTLY — same shapes, colours, proportions, text characters. Do NOT invent, modify, redraw, stylise, or add to the logo. Do NOT add extra graphics, logos, text, badges, or patches anywhere. Do NOT duplicate the logo. Render as raised dimensional embroidery with visible thread texture and soft shadow on the fabric. Centre the logo on the front panel.',
 
-  // 4. NEGATIVE INSTRUCTIONS — folded into main prompt
-  avoid: 'Avoid: flat brim, low-profile, baseball or fitted cap, dad hat, snapback closure visible from front, mesh on front panel, foam on side panels, panel bleeding, multiple caps, model, person, hands, mannequin, extra brims, busy or coloured background, props, harsh shadows, lens flare, cartoon, illustration, sketch.',
+  avoid: 'Avoid: flat brim, low-profile, baseball or fitted cap, dad hat, snapback closure visible from front, mesh on front panel, panel bleeding, multiple caps, model, person, hands, mannequin, extra brims, busy or coloured background, props, harsh shadows, lens flare, cartoon, illustration, sketch.',
 
-  // 5. LIGHTING
   lighting: 'Lighting: soft directional studio light from upper-left, gentle shadows on the right of the crown, subtle shadow under the brim. Soft-box quality, no glare, no rim lighting, no coloured gels.',
 
-  // 6. BACKGROUND
   background: 'Background: pure white seamless studio backdrop, barely-perceptible cool gradient near the bottom. Soft natural contact shadow directly beneath the cap, diffuse not hard-edged. No props, no other objects.',
 
-  // 7. STYLE / QUALITY
   style: 'Style: 85mm lens at f/4, shallow depth of field with the cap fully sharp. Ultra detail, fabric texture and mesh weave clearly visible, embroidery thread depth visible. Ecommerce product photography, clean catalogue look.',
 };
+
+// ============================================================================
+// MODEL SHOT PROMPTS — Australian outback setting, 3 model types
+// ============================================================================
+const MODEL_TYPES = [
+  {
+    key: 'male',
+    label: 'Men',
+    prompt: 'Portrait of a rugged Australian country man in his 30s wearing a trucker cap. He has a weathered, sun-tanned face and a relaxed confident expression. Wearing a simple work shirt. Standing outdoors in the Australian outback — red dirt, dry golden grass, sparse gum trees, clear blue sky with white clouds. The cap logo faces the camera and is clearly readable. Natural golden-hour sunlight. Shot on 85mm lens, shallow depth of field with the person and cap sharp, background softly blurred. Authentic rural Australian feel.',
+  },
+  {
+    key: 'female',
+    label: 'Women',
+    prompt: 'Portrait of a young Australian country woman in her late 20s wearing a trucker cap. She has a natural sun-kissed look and a warm genuine smile. Wearing a simple casual top. Standing outdoors in the Australian outback — red earth, golden grassland, scattered eucalyptus trees, wide open sky. The cap logo faces the camera and is clearly readable. Natural golden-hour sunlight. Shot on 85mm lens, shallow depth of field with the person and cap sharp, background softly blurred. Authentic rural Australian feel.',
+  },
+  {
+    key: 'child',
+    label: 'Kids',
+    prompt: 'Portrait of a cheerful Australian country kid around 10 years old wearing a trucker cap. The child has a big natural grin and a sun-tanned face. Wearing a simple casual t-shirt. Standing outdoors in the Australian outback — red dust, dry golden grass, a few gum trees, bright blue sky. The cap logo faces the camera and is clearly readable. Natural warm afternoon sunlight. Shot on 85mm lens, shallow depth of field with the child and cap sharp, background softly blurred. Authentic rural Australian feel.',
+  },
+];
 
 export default function CapMockupGenerator() {
   const [designs, setDesigns] = useState({ front: null, leftSide: null, rightSide: null });
@@ -61,6 +66,10 @@ export default function CapMockupGenerator() {
   const [generating, setGenerating] = useState(false);
   const [progress, setProgress] = useState('');
   const [result, setResult] = useState(null);
+  // Model shots state
+  const [generatingModels, setGeneratingModels] = useState(false);
+  const [modelProgress, setModelProgress] = useState('');
+  const [modelShots, setModelShots] = useState(null);
   const fileInputRefs = useRef({});
 
   const handleFile = (sideKey, file) => {
@@ -77,11 +86,12 @@ export default function CapMockupGenerator() {
   const clearDesign = (sideKey) => setDesigns(prev => ({ ...prev, [sideKey]: null }));
   const canGenerate = !!designs.front && !generating;
 
+  // ── Product shot prompt builder ───────────────────────────────────────
   const buildPrompt = () => {
     const colourLine = `Cap fabric colour: ${capColor}. Mesh sides match this colour or one shade lighter. Brim same as front.`;
     const stripeLine = stripeCount === 0
       ? 'No stripes — clean unbroken mesh on the side panels.'
-      : `${stripeCount} thin horizontal sewn-in ribbon stripe${stripeCount > 1 ? 's' : ''} across both side mesh panels in the middle third, evenly spaced and symmetrical. Flat ribbon tape sewn through the mesh (not embroidered, not painted). Stripe colour complements the ${capColor} cap — pick a tasteful contrasting tone (white, off-white, or single accent).`;
+      : `${stripeCount} horizontal sewn-in flat ribbon stripe${stripeCount > 1 ? 's' : ''} on each side mesh panel, running parallel to the brim. Stripes tightly grouped — only 3-4mm gap between adjacent stripes, almost touching. Middle third of panel height, symmetrical on both sides. Flat ribbon tape through mesh. Stripe colour complements the ${capColor} cap.`;
     const sideMentions = [];
     if (designs.leftSide)  sideMentions.push('smaller embroidered logo on the LEFT side mesh panel near the foam-mesh seam');
     if (designs.rightSide) sideMentions.push('smaller embroidered logo on the RIGHT side mesh panel near the foam-mesh seam');
@@ -90,23 +100,27 @@ export default function CapMockupGenerator() {
       : 'No side panel logos.';
 
     return [
-      PROMPT.subject,
-      PROMPT.construction,
-      colourLine,
-      PROMPT.logoLockdown,
-      sideLogoLine,
-      stripeLine,
-      PROMPT.lighting,
-      PROMPT.background,
-      PROMPT.style,
-      PROMPT.avoid,
+      PROMPT.subject, PROMPT.construction, colourLine, PROMPT.logoLockdown,
+      sideLogoLine, stripeLine, PROMPT.lighting, PROMPT.background, PROMPT.style, PROMPT.avoid,
     ].join(' ');
   };
 
+  // ── Model shot prompt builder ─────────────────────────────────────────
+  const buildModelPrompt = (modelType) => {
+    const capDesc = `The trucker cap is ${capColor} with a single-piece structured front panel, mesh sides, and a pre-curved brim with no topstitching.`;
+    const stripePart = stripeCount === 0
+      ? ''
+      : ` The cap has ${stripeCount} thin horizontal stripe${stripeCount > 1 ? 's' : ''} on each side panel.`;
+    const logoInstruction = 'CRITICAL: the cap front panel displays the provided logo design EXACTLY as given — same shapes, colours, text. Do NOT invent a different logo. The logo must be clearly visible and readable in the photo.';
+    return `${modelType.prompt} ${capDesc}${stripePart} ${logoInstruction}`;
+  };
+
+  // ── Product shot handler ──────────────────────────────────────────────
   const handleGenerate = async () => {
     if (!designs.front) { alert('Please upload at least a front-panel logo.'); return; }
     setGenerating(true);
     setResult(null);
+    setModelShots(null);
 
     try {
       setProgress('Preparing your design…');
@@ -114,6 +128,7 @@ export default function CapMockupGenerator() {
       formData.append('capColor', capColor);
       formData.append('stripeCount', String(stripeCount));
       formData.append('prompt', buildPrompt());
+      formData.append('mode', 'product');
       formData.append('design_front', designs.front.file);
       if (designs.leftSide)  formData.append('design_leftSide',  designs.leftSide.file);
       if (designs.rightSide) formData.append('design_rightSide', designs.rightSide.file);
@@ -134,6 +149,42 @@ export default function CapMockupGenerator() {
     }
   };
 
+  // ── Model shots handler — fires 3 calls in parallel ──────────────────
+  const handleModelShots = async () => {
+    if (!designs.front) return;
+    setGeneratingModels(true);
+    setModelShots(null);
+    setModelProgress('Creating lifestyle previews…');
+
+    try {
+      const promises = MODEL_TYPES.map(async (modelType) => {
+        const formData = new FormData();
+        formData.append('capColor', capColor);
+        formData.append('stripeCount', String(stripeCount));
+        formData.append('prompt', buildModelPrompt(modelType));
+        formData.append('mode', 'model');
+        formData.append('design_front', designs.front.file);
+
+        const res = await fetch(API_ENDPOINT, { method: 'POST', body: formData });
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          return { key: modelType.key, label: modelType.label, error: errData.error || `Failed (${res.status})` };
+        }
+        const data = await res.json();
+        return { key: modelType.key, label: modelType.label, imageUrl: data.imageUrl };
+      });
+
+      const results = await Promise.all(promises);
+      setModelShots(results);
+    } catch (err) {
+      alert('Something went wrong with lifestyle previews: ' + err.message);
+    } finally {
+      setGeneratingModels(false);
+      setModelProgress('');
+    }
+  };
+
+  // ── Sub-components ────────────────────────────────────────────────────
   const SectionHeader = ({ num, title, subtitle }) => (
     <div className="flex items-baseline gap-4 mb-5 pb-3 border-b-2" style={{ borderColor: '#1a1a1a' }}>
       <span className="text-xs tracking-widest" style={{ fontFamily: 'JetBrains Mono, monospace', color: '#c2410c' }}>
@@ -159,7 +210,7 @@ export default function CapMockupGenerator() {
                 </div>
                 <h1 className="text-6xl leading-none" style={{ fontFamily: 'Anton, sans-serif', letterSpacing: '0.01em' }}>PREVIEW YOUR CAP</h1>
                 <p className="mt-3 text-lg max-w-xl" style={{ fontStyle: 'italic', color: '#3d3829' }}>
-                  Upload your logos, choose a colour and stripe count, and see how your custom 5-panel trucker would look.
+                  Upload your logos, choose a colour and stripe count, and see how your custom trucker cap would look.
                 </p>
               </div>
             </div>
@@ -214,7 +265,7 @@ export default function CapMockupGenerator() {
 
           {/* 02 — Colour & stripes */}
           <section className="mb-10">
-            <SectionHeader num={2} title="Pick your colour & stripes" subtitle="Choose any cap colour. Add 0–3 sewn stripes around the side panels." />
+            <SectionHeader num={2} title="Pick your colour & stripes" subtitle="Choose any cap colour. Add 0-3 sewn stripes around the side panels." />
             <div className="space-y-6">
               <div className="flex flex-col md:flex-row gap-6">
                 <div className="flex-shrink-0">
@@ -273,7 +324,7 @@ export default function CapMockupGenerator() {
             </div>
           </section>
 
-          {/* 03 — Generate */}
+          {/* 03 — Preview */}
           <section className="mb-10">
             <div className="flex items-center justify-between mb-5 pb-3 border-b-2 flex-wrap gap-3" style={{ borderColor: '#1a1a1a' }}>
               <div className="flex items-baseline gap-4">
@@ -294,13 +345,14 @@ export default function CapMockupGenerator() {
                   <span className="text-sm" style={{ fontFamily: 'JetBrains Mono, monospace' }}>{progress}</span>
                 </div>
                 <p className="text-xs mt-3" style={{ color: '#6b6452' }}>
-                  Your preview is being created. This usually takes 15–30 seconds.
+                  Your preview is being created. This usually takes 15-30 seconds.
                 </p>
               </div>
             )}
 
             {result && !generating && (
               <div>
+                {/* Product shot */}
                 <div className="border-2" style={{ borderColor: '#1a1a1a' }}>
                   <img src={result.imageUrl} alt="Cap preview" className="w-full block" />
                 </div>
@@ -317,6 +369,71 @@ export default function CapMockupGenerator() {
                   <span className="text-sm" style={{ color: '#6b6452', fontStyle: 'italic' }}>
                     Not happy with the result? Hit try again for a fresh version.
                   </span>
+                </div>
+
+                {/* See it on models — button + results */}
+                <div className="mt-8 pt-6 border-t-2" style={{ borderColor: '#1a1a1a' }}>
+                  <div className="flex items-center justify-between flex-wrap gap-3 mb-5">
+                    <div>
+                      <h3 className="text-2xl" style={{ fontFamily: 'Anton, sans-serif', letterSpacing: '0.02em' }}>SEE IT IN ACTION</h3>
+                      <p className="text-sm mt-1" style={{ fontStyle: 'italic', color: '#6b6452' }}>
+                        Preview your cap on real people in the Australian outback.
+                      </p>
+                    </div>
+                    {!modelShots && !generatingModels && (
+                      <button onClick={handleModelShots}
+                        className="px-6 py-3 flex items-center gap-2"
+                        style={{ backgroundColor: '#c2410c', color: '#f5f1e8', fontFamily: 'Anton, sans-serif', letterSpacing: '0.05em' }}>
+                        <Users size={18} /> SEE IT ON MODELS
+                      </button>
+                    )}
+                  </div>
+
+                  {generatingModels && (
+                    <div className="p-6 border-2" style={{ borderColor: '#c2410c', backgroundColor: '#fff5ee' }}>
+                      <div className="flex items-center gap-3">
+                        <Loader2 size={18} className="animate-spin" style={{ color: '#c2410c' }} />
+                        <span className="text-sm" style={{ fontFamily: 'JetBrains Mono, monospace' }}>{modelProgress}</span>
+                      </div>
+                      <p className="text-xs mt-3" style={{ color: '#6b6452' }}>
+                        Creating 3 lifestyle previews at once. This usually takes 30-45 seconds.
+                      </p>
+                    </div>
+                  )}
+
+                  {modelShots && !generatingModels && (
+                    <div>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {modelShots.map((shot) => (
+                          <div key={shot.key} className="border-2" style={{ borderColor: '#1a1a1a' }}>
+                            {shot.imageUrl ? (
+                              <img src={shot.imageUrl} alt={`${shot.label} preview`} className="w-full block" />
+                            ) : (
+                              <div className="aspect-square flex items-center justify-center p-4" style={{ backgroundColor: '#fdf0f0' }}>
+                                <p className="text-sm text-center" style={{ color: '#a83232' }}>{shot.error || 'Failed to create this preview'}</p>
+                              </div>
+                            )}
+                            <div className="px-3 py-2" style={{ backgroundColor: '#f5f1e8' }}>
+                              <span className="text-sm" style={{ fontFamily: 'Anton, sans-serif', letterSpacing: '0.05em' }}>{shot.label.toUpperCase()}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="mt-4 flex gap-3 items-center flex-wrap">
+                        <button onClick={handleModelShots} className="px-5 py-2 border-2 flex items-center gap-2"
+                          style={{ borderColor: '#1a1a1a', fontFamily: 'Anton, sans-serif', letterSpacing: '0.05em' }}>
+                          <RefreshCw size={16} /> TRY AGAIN
+                        </button>
+                        {modelShots.filter(s => s.imageUrl).map(shot => (
+                          <a key={shot.key} href={shot.imageUrl} download target="_blank" rel="noopener noreferrer"
+                            className="px-4 py-2 text-sm flex items-center gap-1"
+                            style={{ backgroundColor: '#c2410c', color: '#f5f1e8', fontFamily: 'Anton, sans-serif', letterSpacing: '0.03em', textDecoration: 'none' }}>
+                            {shot.label.toUpperCase()}
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
