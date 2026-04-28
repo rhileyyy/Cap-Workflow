@@ -24,10 +24,10 @@ const QUICK_COLORS = [
 const STRIPE_OPTIONS = [0, 1, 2, 3];
 
 // ============================================================================
-// PROMPT TEMPLATE — the language sent to Nano Banana Pro for every render.
+// PROMPT TEMPLATE — the language sent to the image engine for every preview.
 // Each block is labelled so you can refine bits independently.
 //
-// IMPORTANT: Nano Banana Pro does NOT support a separate negative_prompt.
+// IMPORTANT: The image engine does NOT support a separate negative_prompt.
 // All "do not do X" instructions are folded into the positive prompt below.
 // ============================================================================
 
@@ -39,13 +39,13 @@ const PROMPT = {
   construction: 'Construction: front two panels are solid foam-backed twill, divided by a clean vertical centre seam from brim to crown. The three rear panels (left, right, back) are clearly mesh with visible woven texture. Sharp clean vertical seam where foam meets mesh — foam never bleeds into mesh, mesh never onto front. Pre-curved brim with downward arc. Small fabric squatchee button on top centre.',
 
   // 3. LOGO LOCKDOWN — stops AI inventing or duplicating logos
-  logoLockdown: 'CRITICAL: the provided front design is the ONLY decoration on the front panel. Reproduce it EXACTLY — same shapes, colours, proportions, text characters. Do NOT invent, modify, redraw, stylise, or add to the logo. Do NOT add extra graphics, logos, text, badges, or patches anywhere. Do NOT duplicate the logo. Render as raised dimensional high quality embroidery with visible thread texture and soft shadow on the fabric. Centre the logo on the front panel.',
+  logoLockdown: 'CRITICAL: the provided front design is the ONLY decoration on the front panel. Reproduce it EXACTLY — same shapes, colours, proportions, text characters. Do NOT invent, modify, redraw, stylise, or add to the logo. Do NOT add extra graphics, logos, text, badges, or patches anywhere. Do NOT duplicate the logo. Render as raised dimensional embroidery with visible thread texture and soft shadow on the fabric. Centre the logo on the front panel.',
 
-  // 4. NEGATIVE INSTRUCTIONS — folded in since Nano Banana has no negative_prompt field
-  avoid: 'Avoid: flat brim, low-profile, baseball or fitted cap, dad hat,visible stiching on top of brim, mesh on front panel, foam on side panels, panel bleeding, multiple caps, model, person, hands, mannequin, extra brims, busy or ed background, props, harsh shadows, lens flare, cartoon, illustration, sketch.',
+  // 4. NEGATIVE INSTRUCTIONS — folded into main prompt
+  avoid: 'Avoid: flat brim, low-profile, baseball or fitted cap, dad hat, snapback closure visible from front, mesh on front panel, foam on side panels, panel bleeding, multiple caps, model, person, hands, mannequin, extra brims, busy or coloured background, props, harsh shadows, lens flare, cartoon, illustration, sketch.',
 
   // 5. LIGHTING
-  lighting: 'Lighting: soft directional studio light from upper-left, gentle shadows on the right of the crown, subtle shadow under the brim. Soft-box quality, no glare, no rim lighting, no ed gels.',
+  lighting: 'Lighting: soft directional studio light from upper-left, gentle shadows on the right of the crown, subtle shadow under the brim. Soft-box quality, no glare, no rim lighting, no coloured gels.',
 
   // 6. BACKGROUND
   background: 'Background: pure white seamless studio backdrop, barely-perceptible cool gradient near the bottom. Soft natural contact shadow directly beneath the cap, diffuse not hard-edged. No props, no other objects.',
@@ -78,7 +78,7 @@ export default function CapMockupGenerator() {
   const canGenerate = !!designs.front && !generating;
 
   const buildPrompt = () => {
-    const colourLine = `Cap fabric colour: ${capColor}. Mesh sides match this colour or use Harmonious color/s. Brim same as front.`;
+    const colourLine = `Cap fabric colour: ${capColor}. Mesh sides match this colour or one shade lighter. Brim same as front.`;
     const stripeLine = stripeCount === 0
       ? 'No stripes — clean unbroken mesh on the side panels.'
       : `${stripeCount} thin horizontal sewn-in ribbon stripe${stripeCount > 1 ? 's' : ''} across both side mesh panels in the middle third, evenly spaced and symmetrical. Flat ribbon tape sewn through the mesh (not embroidered, not painted). Stripe colour complements the ${capColor} cap — pick a tasteful contrasting tone (white, off-white, or single accent).`;
@@ -109,7 +109,7 @@ export default function CapMockupGenerator() {
     setResult(null);
 
     try {
-      setProgress('Uploading your design…');
+      setProgress('Preparing your design…');
       const formData = new FormData();
       formData.append('capColor', capColor);
       formData.append('stripeCount', String(stripeCount));
@@ -118,7 +118,7 @@ export default function CapMockupGenerator() {
       if (designs.leftSide)  formData.append('design_leftSide',  designs.leftSide.file);
       if (designs.rightSide) formData.append('design_rightSide', designs.rightSide.file);
 
-      setProgress('Generating your cap with Nano Banana Pro…');
+      setProgress('Creating your preview…');
       const res = await fetch(API_ENDPOINT, { method: 'POST', body: formData });
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
@@ -127,7 +127,7 @@ export default function CapMockupGenerator() {
       const data = await res.json();
       setResult(data);
     } catch (err) {
-      alert('Generation failed: ' + err.message);
+      alert('Something went wrong: ' + err.message);
     } finally {
       setGenerating(false);
       setProgress('');
@@ -278,12 +278,12 @@ export default function CapMockupGenerator() {
             <div className="flex items-center justify-between mb-5 pb-3 border-b-2 flex-wrap gap-3" style={{ borderColor: '#1a1a1a' }}>
               <div className="flex items-baseline gap-4">
                 <span className="text-xs tracking-widest" style={{ fontFamily: 'JetBrains Mono, monospace', color: '#c2410c' }}>03</span>
-                <h2 className="text-3xl leading-none" style={{ fontFamily: 'Anton, sans-serif', letterSpacing: '0.02em' }}>RENDER</h2>
+                <h2 className="text-3xl leading-none" style={{ fontFamily: 'Anton, sans-serif', letterSpacing: '0.02em' }}>PREVIEW</h2>
               </div>
               <button onClick={handleGenerate} disabled={!canGenerate}
                 className="px-6 py-3 transition-all flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
                 style={{ backgroundColor: '#1a1a1a', color: '#f5f1e8', fontFamily: 'Anton, sans-serif', letterSpacing: '0.05em' }}>
-                {generating ? (<><Loader2 size={18} className="animate-spin" /> WORKING…</>) : (<><Sparkles size={18} /> GENERATE PREVIEW</>)}
+                {generating ? (<><Loader2 size={18} className="animate-spin" /> WORKING…</>) : (<><Sparkles size={18} /> CREATE PREVIEW</>)}
               </button>
             </div>
 
@@ -294,7 +294,7 @@ export default function CapMockupGenerator() {
                   <span className="text-sm" style={{ fontFamily: 'JetBrains Mono, monospace' }}>{progress}</span>
                 </div>
                 <p className="text-xs mt-3" style={{ color: '#6b6452' }}>
-                  Nano Banana Pro renders typically take 15–30 seconds. Hang tight.
+                  Your preview is being created. This usually takes 15–30 seconds.
                 </p>
               </div>
             )}
@@ -302,12 +302,12 @@ export default function CapMockupGenerator() {
             {result && !generating && (
               <div>
                 <div className="border-2" style={{ borderColor: '#1a1a1a' }}>
-                  <img src={result.imageUrl} alt="Generated cap preview" className="w-full block" />
+                  <img src={result.imageUrl} alt="Cap preview" className="w-full block" />
                 </div>
                 <div className="mt-6 flex gap-3 items-center flex-wrap">
                   <button onClick={handleGenerate} className="px-5 py-2 border-2 flex items-center gap-2"
                     style={{ borderColor: '#1a1a1a', fontFamily: 'Anton, sans-serif', letterSpacing: '0.05em' }}>
-                    <RefreshCw size={16} /> GENERATE AGAIN
+                    <RefreshCw size={16} /> TRY AGAIN
                   </button>
                   <a href={result.imageUrl} download target="_blank" rel="noopener noreferrer"
                      className="px-5 py-2 flex items-center gap-2"
@@ -315,7 +315,7 @@ export default function CapMockupGenerator() {
                     DOWNLOAD
                   </a>
                   <span className="text-sm" style={{ color: '#6b6452', fontStyle: 'italic' }}>
-                    Not happy with the result? Hit regenerate for a fresh attempt.
+                    Not happy with the result? Hit try again for a fresh version.
                   </span>
                 </div>
               </div>
