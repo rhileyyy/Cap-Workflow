@@ -1,16 +1,3 @@
-// ============================================================================
-// /api/generate — Backend route handler
-// ----------------------------------------------------------------------------
-// Reference image allocation (Nano Banana Pro allows max 3):
-//   Slot 1: Base cap photo (always — from /public/cap-reference.jpg)
-//   Slot 2: Customer's front logo (always)
-//   Slot 3: Side logo if uploaded, OR duplicate of front logo for emphasis
-//
-// ENVIRONMENT VARIABLES (set these in your Vercel project settings):
-//   FREEPIK_API_KEY       — your Freepik API key
-//   BLOB_READ_WRITE_TOKEN — auto-set when you connect Vercel Blob
-// ============================================================================
-
 import { put } from '@vercel/blob';
 import { headers } from 'next/headers';
 
@@ -32,24 +19,19 @@ export async function POST(request) {
       return jsonError('Missing prompt or front design.', 400);
     }
 
-    // ── Build the base URL for the public cap-reference image ──────────
-    // Next.js serves files in /public/ at the root URL automatically.
     const headersList = await headers();
     const host = headersList.get('host') || 'localhost:3000';
     const protocol = host.includes('localhost') ? 'http' : 'https';
     const baseCapUrl = `${protocol}://${host}/cap-reference.jpg`;
 
-    // ── Build reference_images array (max 3 slots) ────────────────────
     const referenceImages = [];
 
-    // SLOT 1: Base cap reference (always first — style anchor)
     referenceImages.push({
       image: baseCapUrl,
       text: 'BASE CAP REFERENCE — use this cap photo as the style, shape, angle, lighting, and construction template. Match the cap silhouette, brim curve, mesh texture, and camera angle exactly. REPLACE the logo on the front panel with the design from the next reference image.',
       mime_type: 'image/jpeg',
     });
 
-    // SLOT 2: Customer's front logo (always second)
     const frontUrl = await uploadToBlob(frontFile, 'front');
     referenceImages.push({
       image: frontUrl,
@@ -57,7 +39,6 @@ export async function POST(request) {
       mime_type: frontFile.type || 'image/png',
     });
 
-    // SLOT 3: Side logo if uploaded, otherwise duplicate front logo for emphasis
     const sideFile = leftFile?.size > 0 ? leftFile : (rightFile?.size > 0 ? rightFile : null);
     if (sideFile) {
       const sideLabel = leftFile?.size > 0 ? 'left' : 'right';
@@ -68,7 +49,6 @@ export async function POST(request) {
         mime_type: sideFile.type || 'image/png',
       });
     } else {
-      // No side logo — use slot 3 to re-emphasise the front logo
       referenceImages.push({
         image: frontUrl,
         text: 'EMPHASIS — same logo as slot 2. The front panel MUST display this exact design. Do not substitute, redraw, or invent a different logo.',
@@ -76,7 +56,6 @@ export async function POST(request) {
       });
     }
 
-    // ── Submit to Nano Banana Pro ─────────────────────────────────────
     const submitResp = await fetch('https://api.freepik.com/v1/ai/text-to-image/nano-banana-pro', {
       method: 'POST',
       headers: {
@@ -103,7 +82,6 @@ export async function POST(request) {
       return jsonError('Freepik response had no task_id', 502);
     }
 
-    // ── Poll for completion ──────────────────────────────────────────
     for (let i = 0; i < 55; i++) {
       await sleep(1000);
       const statusResp = await fetch(
@@ -132,8 +110,6 @@ export async function POST(request) {
     return jsonError(err.message || 'Generation failed', 500);
   }
 }
-
-// ── Helpers ────────────────────────────────────────────────────────────────
 
 async function uploadToBlob(file, label) {
   const blob = await put(`logos/${label}-${file.name}`, file, {
