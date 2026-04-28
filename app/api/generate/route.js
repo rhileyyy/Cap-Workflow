@@ -34,17 +34,14 @@ export async function POST(request) {
 
     if (mode === 'model') {
       // ── MODEL MODE ────────────────────────────────────────────────
-      // For lifestyle shots, we send the logo as reference (no base cap).
-      // Slot 1: front logo — the design to show on the cap
-      // Slot 2: front logo again for emphasis
       referenceImages.push({
         image: frontUrl,
-        text: 'CAP FRONT LOGO — the person in the photo is wearing a trucker cap. This image is the exact logo that must appear on the front panel of that cap. Copy it exactly onto the cap, clearly visible and readable. Do NOT substitute any other design.',
+        text: 'CAP FRONT LOGO — this is the EXACT logo to display on the cap front panel. Copy it pixel-for-pixel as 3D puff embroidery with visible raised depth, thread texture, and shadow. Do NOT redraw, reinterpret, simplify, or substitute any part of this design.',
         mime_type: frontFile.type || 'image/png',
       });
       referenceImages.push({
         image: frontUrl,
-        text: 'EMPHASIS — same logo. The cap in the photo MUST display this exact design on its front panel. Make it clearly readable.',
+        text: 'EMPHASIS — identical logo repeated. The cap front panel MUST show this exact design as raised 3D embroidery. Every shape, colour, and letter must match. Do NOT invent a different logo.',
         mime_type: frontFile.type || 'image/png',
       });
 
@@ -66,7 +63,7 @@ export async function POST(request) {
 
       referenceImages.push({
         image: frontUrl,
-        text: 'FRONT PANEL LOGO — copy this image pixel-by-pixel onto the cap front panel as a verbatim exact replica rendered as raised embroidery. This is the ONLY logo on the front panel. Do NOT invent or substitute.',
+        text: 'FRONT PANEL LOGO — copy this image pixel-for-pixel onto the cap front panel as 3D puff embroidery with visible raised depth, individual thread stitches, and shadow cast onto the cap fabric. This is the ONLY logo on the front. Do NOT redraw, reinterpret, simplify, or substitute any part.',
         mime_type: frontFile.type || 'image/png',
       });
 
@@ -76,13 +73,13 @@ export async function POST(request) {
         const sideUrl = await uploadToBlob(sideFile, sideLabel);
         referenceImages.push({
           image: sideUrl,
-          text: `SIDE PANEL LOGO — embroider this design showing dimensions as an accent on the ${sideLabel} side mesh panel and/or embroidered over stripes. Reproduce exactly.`,
+          text: `SIDE PANEL LOGO — reproduce this design exactly as smaller 3D puff embroidery on the ${sideLabel} side mesh panel. Raised depth with visible thread texture.`,
           mime_type: sideFile.type || 'image/png',
         });
       } else {
         referenceImages.push({
           image: frontUrl,
-          text: 'EMPHASIS — same logo as slot 2. The front panel MUST display this exact design.',
+          text: 'EMPHASIS — identical logo repeated. The front panel MUST display this exact design as raised 3D puff embroidery. Every shape, colour, and letter must match pixel-for-pixel. Do NOT invent, redraw, or substitute.',
           mime_type: frontFile.type || 'image/png',
         });
       }
