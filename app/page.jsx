@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef } from 'react';
 import { Upload, Check, Loader2, RefreshCw, Sparkles, Users } from 'lucide-react';
 
 const API_ENDPOINT = '/api/generate';
@@ -19,17 +19,25 @@ const QUICK_COLORS = [
 
 const STRIPE_OPTIONS = [0, 1, 2, 3];
 
+// ── Cap part definitions for colour pickers ─────────────────────────────────
+const CAP_PARTS = [
+  { key: 'front',    label: 'Front Panel' },
+  { key: 'mesh',     label: 'Mesh Panels' },
+  { key: 'brim',     label: 'Brim' },
+  { key: 'snapback', label: 'Snapback' },
+];
+
 // ============================================================================
-// PRODUCT SHOT PROMPT — used for the flat product preview
+// PRODUCT SHOT PROMPT
 // ============================================================================
 const PROMPT = {
   subject: 'Three-quarter front view of a high-crown structured trucker cap, photographed at a 30-degree angle from the front-right, eye-level, sitting upright on a flat surface.',
 
-  construction: 'Construction: a single continuous front face panel — one solid piece of structured fabric, NO visible vertical centre seam, smooth uninterrupted front from brim to crown. The three rear panels are clearly mesh with visible woven texture. Sharp clean vertical seam where the structured front meets the mesh sides. Pre-curved brim with downward arc and a clean smooth edge — NO visible stitching on the brim surface. Small fabric squatchee button on top centre.',
+  construction: 'Construction: a single continuous front face panel — one solid piece of structured fabric, NO visible vertical centre seam, smooth uninterrupted front from brim to crown. The three rear panels are clearly mesh with visible woven texture. Sharp clean vertical seam where the structured front meets the mesh sides. Pre-curved brim with downward arc and a clean smooth edge — NO visible decorative topstitching on the brim surface. Small fabric squatchee button on top centre. Visible snapback closure at the back.',
 
-  logoLockdown: 'CRITICAL: the provided front design is the ONLY decoration on the front panel. Reproduce it EXACTLY — same shapes, colours, proportions, text characters. Do NOT invent, modify, redraw, stylise, or add to the logo. Do NOT add extra graphics, logos, text, badges, or patches anywhere. Do NOT duplicate the logo. Render as highly detailed raised dimensional embroidery with visible thread texture and soft shadow on the fabric. Centre the logo on the front panel.',
+  logoLockdown: 'CRITICAL: the provided front design is the ONLY decoration on the front panel. Reproduce it EXACTLY — same shapes, colours, proportions, text characters. Do NOT invent, modify, redraw, stylise, or add to the logo. Do NOT add extra graphics, logos, text, badges, or patches anywhere. Do NOT duplicate the logo. Render as raised dimensional embroidery with visible thread texture and soft shadow on the fabric. Centre the logo on the front panel.',
 
-  avoid: 'Avoid: flat brim, low-profile, baseball or fitted cap, dad hat, snapback closure visible from front, mesh on front panel, panel bleeding, multiple caps, model, person, hands, mannequin, extra brims, busy or coloured background, props, harsh shadows, lens flare, cartoon, illustration, sketch.',
+  avoid: 'Avoid: flat brim, low-profile, baseball or fitted cap, dad hat, mesh on front panel, panel bleeding, multiple caps, model, person, hands, mannequin, extra brims, busy or coloured background, props, harsh shadows, lens flare, cartoon, illustration, sketch.',
 
   lighting: 'Lighting: soft directional studio light from upper-left, gentle shadows on the right of the crown, subtle shadow under the brim. Soft-box quality, no glare, no rim lighting, no coloured gels.',
 
@@ -39,34 +47,42 @@ const PROMPT = {
 };
 
 // ============================================================================
-// MODEL SHOT PROMPTS — Australian outback setting, 3 model types
+// MODEL SHOT PROMPTS
 // ============================================================================
 const MODEL_TYPES = [
   {
     key: 'male',
     label: 'Men',
-    prompt: 'Portrait of a rugged Australian country man in his 30s wearing a trucker cap. He has a weathered, sun-tanned face and a relaxed confident expression. Wearing a simple work shirt. Standing outdoors in the Australian outback — red dirt, dry golden grass, sparse gum trees, clear blue sky with white clouds. The cap logo is highly detailed 3D embroider facing the camera and is clearly readable. Natural golden-hour sunlight. Shot on 85mm lens, shallow depth of field with the person and cap sharp, background softly blurred. Authentic rural Australian feel.',
+    prompt: 'Portrait of a rugged Australian country man in his 30s wearing a trucker cap. Weathered, sun-tanned face, relaxed confident expression. Simple work shirt. Standing outdoors in the Australian outback — red dirt, dry golden grass, sparse gum trees, clear blue sky. The cap logo faces the camera and is clearly readable. Natural golden-hour sunlight. Shot on 85mm lens, shallow depth of field, person and cap sharp, background softly blurred. Authentic rural Australian feel.',
   },
   {
     key: 'female',
     label: 'Women',
-    prompt: 'Portrait of a young Australian country woman in her late 20s wearing a trucker cap. She has a natural sun-kissed look and a warm genuine smile. Wearing a simple casual top. Standing outdoors in the Australian outback — red earth, golden grassland, scattered eucalyptus trees, wide open sky. The cap logo is highly detailed 3D embroider facing the camera and is clearly readable. Natural golden-hour sunlight. Shot on 85mm lens, shallow depth of field with the person and cap sharp, background softly blurred. Authentic rural Australian feel.',
+    prompt: 'Portrait of a young Australian country woman in her late 20s wearing a trucker cap. Natural sun-kissed look, warm genuine smile. Simple casual top. Standing outdoors in the Australian outback — red earth, golden grassland, scattered eucalyptus trees, wide open sky. The cap logo faces the camera and is clearly readable. Natural golden-hour sunlight. Shot on 85mm lens, shallow depth of field, person and cap sharp, background softly blurred. Authentic rural Australian feel.',
   },
   {
     key: 'child',
     label: 'Kids',
-    prompt: 'Portrait of a cheerful Australian country kid around 10 years old wearing a trucker cap. The child has a big natural grin and a sun-tanned face. Wearing a simple casual t-shirt. Standing outdoors in the Australian outback — red dust, dry golden grass, a few gum trees, bright blue sky. The cap logo is highly detailed 3D embroider facing the camera and is clearly readable. Natural warm afternoon sunlight. Shot on 85mm lens, shallow depth of field with the child and cap sharp, background softly blurred. Authentic rural Australian feel.',
+    prompt: 'Portrait of a cheerful Australian country kid around 10 years old wearing a trucker cap. Big natural grin, sun-tanned face. Simple casual t-shirt. Standing outdoors in the Australian outback — red dust, dry golden grass, a few gum trees, bright blue sky. The cap logo faces the camera and is clearly readable. Natural warm afternoon sunlight. Shot on 85mm lens, shallow depth of field, child and cap sharp, background softly blurred. Authentic rural Australian feel.',
   },
 ];
 
 export default function CapMockupGenerator() {
   const [designs, setDesigns] = useState({ front: null, leftSide: null, rightSide: null });
-  const [capColor, setCapColor] = useState('#1a1a1a');
+  // Separate colours for each cap part
+  const [colors, setColors] = useState({
+    front: '#1a1a1a',
+    mesh: '#1a1a1a',
+    brim: '#1a1a1a',
+    snapback: '#1a1a1a',
+  });
   const [stripeCount, setStripeCount] = useState(0);
+  const [stripeColor, setStripeColor] = useState('#ffffff');
+  const [sandwichBrim, setSandwichBrim] = useState(false);
+  const [sandwichColor, setSandwichColor] = useState('#c2410c');
   const [generating, setGenerating] = useState(false);
   const [progress, setProgress] = useState('');
   const [result, setResult] = useState(null);
-  // Model shots state
   const [generatingModels, setGeneratingModels] = useState(false);
   const [modelProgress, setModelProgress] = useState('');
   const [modelShots, setModelShots] = useState(null);
@@ -86,32 +102,51 @@ export default function CapMockupGenerator() {
   const clearDesign = (sideKey) => setDesigns(prev => ({ ...prev, [sideKey]: null }));
   const canGenerate = !!designs.front && !generating;
 
-  // ── Product shot prompt builder ───────────────────────────────────────
+  const setColor = (part, value) => {
+    setColors(prev => ({ ...prev, [part]: value }));
+  };
+
+  const matchAllToFront = () => {
+    setColors({ front: colors.front, mesh: colors.front, brim: colors.front, snapback: colors.front });
+  };
+
+  // ── Colour description for prompts ────────────────────────────────────
+  const buildColourLine = () => {
+    let line = `Front panel colour: ${colors.front}. Mesh side and back panels: ${colors.mesh}. Brim colour: ${colors.brim}. Snapback closure colour: ${colors.snapback}.`;
+    if (sandwichBrim) {
+      line += ` The brim has a sandwich brim — a contrasting colour layer of ${sandwichColor} visible along the underside edge of the brim, creating a two-tone brim effect.`;
+    }
+    return line;
+  };
+
+  // ── Product shot prompt ───────────────────────────────────────────────
   const buildPrompt = () => {
-    const colourLine = `Cap fabric colour: ${capColor}. Mesh sides match this colour or one shade lighter. Brim same as front.`;
     const stripeLine = stripeCount === 0
       ? 'No stripes — clean unbroken mesh on the side panels.'
-      : `${stripeCount} horizontal sewn-in flat ribbon stripe${stripeCount > 1 ? 's' : ''} on each side mesh panel, running parallel to the brim. Stripes tightly grouped — only 2mm gap between adjacent stripes, almost touching. Middle third of panel height, symmetrical on both sides. Flat ribbon tape through mesh. Stripe colour complements the ${capColor} cap.`;
+      : `${stripeCount} horizontal sewn-in flat ribbon stripe${stripeCount > 1 ? 's' : ''} in colour ${stripeColor} on each side mesh panel, running parallel to the brim. Stripes tightly grouped — only 3-4mm gap between adjacent stripes, almost touching. Middle third of panel height, symmetrical on both sides. Flat ribbon tape through mesh.`;
     const sideMentions = [];
-    if (designs.leftSide)  sideMentions.push('smaller embroidered logo on the LEFT side mesh panel near the foam-mesh seam');
-    if (designs.rightSide) sideMentions.push('smaller embroidered logo on the RIGHT side mesh panel near the foam-mesh seam');
+    if (designs.leftSide)  sideMentions.push('smaller embroidered logo on the LEFT side mesh panel near the front-mesh seam');
+    if (designs.rightSide) sideMentions.push('smaller embroidered logo on the RIGHT side mesh panel near the front-mesh seam');
     const sideLogoLine = sideMentions.length > 0
-      ? `Also: ${sideMentions.join(', and ')}. Each side logo reproduced exactly from its reference image, embroidered, sitting on top of any stripes.`
+      ? `Also: ${sideMentions.join(', and ')}. Each side logo reproduced exactly, embroidered, sitting on top of any stripes.`
       : 'No side panel logos.';
 
     return [
-      PROMPT.subject, PROMPT.construction, colourLine, PROMPT.logoLockdown,
+      PROMPT.subject, PROMPT.construction, buildColourLine(), PROMPT.logoLockdown,
       sideLogoLine, stripeLine, PROMPT.lighting, PROMPT.background, PROMPT.style, PROMPT.avoid,
     ].join(' ');
   };
 
-  // ── Model shot prompt builder ─────────────────────────────────────────
+  // ── Model shot prompt ─────────────────────────────────────────────────
   const buildModelPrompt = (modelType) => {
-    const capDesc = `The trucker cap is ${capColor} with a single-piece structured front panel, mesh sides, and a pre-curved brim with no topstitching.`;
+    let capDesc = `The trucker cap has a ${colors.front} front panel, ${colors.mesh} mesh sides, ${colors.brim} brim, and ${colors.snapback} snapback closure. Single-piece structured front, pre-curved brim with no topstitching.`;
+    if (sandwichBrim) {
+      capDesc += ` The brim has a ${sandwichColor} sandwich brim layer visible along its underside edge.`;
+    }
     const stripePart = stripeCount === 0
       ? ''
-      : ` The cap has ${stripeCount} thin horizontal stripe${stripeCount > 1 ? 's' : ''} on each side panel.`;
-    const logoInstruction = 'CRITICAL: the cap front panel displays the provided logo design EXACTLY as given — same shapes, colours, text. Do NOT invent a different logo. The logo must be clearly visible and readable in the photo.';
+      : ` The cap has ${stripeCount} thin horizontal ${stripeColor} stripe${stripeCount > 1 ? 's' : ''} on each side panel, tightly grouped.`;
+    const logoInstruction = 'CRITICAL: the cap front panel displays the provided logo design EXACTLY as given — same shapes, colours, text. Do NOT invent a different logo. The logo must be clearly visible and readable.';
     return `${modelType.prompt} ${capDesc}${stripePart} ${logoInstruction}`;
   };
 
@@ -125,8 +160,6 @@ export default function CapMockupGenerator() {
     try {
       setProgress('Preparing your design…');
       const formData = new FormData();
-      formData.append('capColor', capColor);
-      formData.append('stripeCount', String(stripeCount));
       formData.append('prompt', buildPrompt());
       formData.append('mode', 'product');
       formData.append('design_front', designs.front.file);
@@ -139,8 +172,7 @@ export default function CapMockupGenerator() {
         const errData = await res.json().catch(() => ({}));
         throw new Error(errData.error || `Server returned ${res.status}`);
       }
-      const data = await res.json();
-      setResult(data);
+      setResult(await res.json());
     } catch (err) {
       alert('Something went wrong: ' + err.message);
     } finally {
@@ -149,7 +181,7 @@ export default function CapMockupGenerator() {
     }
   };
 
-  // ── Model shots handler — fires 3 calls in parallel ──────────────────
+  // ── Model shots handler ───────────────────────────────────────────────
   const handleModelShots = async () => {
     if (!designs.front) return;
     setGeneratingModels(true);
@@ -157,24 +189,18 @@ export default function CapMockupGenerator() {
     setModelProgress('Creating lifestyle previews…');
 
     try {
-      const promises = MODEL_TYPES.map(async (modelType) => {
+      const results = await Promise.all(MODEL_TYPES.map(async (mt) => {
         const formData = new FormData();
-        formData.append('capColor', capColor);
-        formData.append('stripeCount', String(stripeCount));
-        formData.append('prompt', buildModelPrompt(modelType));
+        formData.append('prompt', buildModelPrompt(mt));
         formData.append('mode', 'model');
         formData.append('design_front', designs.front.file);
-
         const res = await fetch(API_ENDPOINT, { method: 'POST', body: formData });
         if (!res.ok) {
           const errData = await res.json().catch(() => ({}));
-          return { key: modelType.key, label: modelType.label, error: errData.error || `Failed (${res.status})` };
+          return { key: mt.key, label: mt.label, error: errData.error || `Failed (${res.status})` };
         }
-        const data = await res.json();
-        return { key: modelType.key, label: modelType.label, imageUrl: data.imageUrl };
-      });
-
-      const results = await Promise.all(promises);
+        return { key: mt.key, label: mt.label, imageUrl: (await res.json()).imageUrl };
+      }));
       setModelShots(results);
     } catch (err) {
       alert('Something went wrong with lifestyle previews: ' + err.message);
@@ -210,7 +236,7 @@ export default function CapMockupGenerator() {
                 </div>
                 <h1 className="text-6xl leading-none" style={{ fontFamily: 'Anton, sans-serif', letterSpacing: '0.01em' }}>PREVIEW YOUR CAP</h1>
                 <p className="mt-3 text-lg max-w-xl" style={{ fontStyle: 'italic', color: '#3d3829' }}>
-                  Upload your logos, choose a colour and stripe count, and see how your custom trucker cap would look.
+                  Upload your logos, choose your colours and stripe count, and see how your custom trucker cap would look.
                 </p>
               </div>
             </div>
@@ -263,63 +289,133 @@ export default function CapMockupGenerator() {
             </div>
           </section>
 
-          {/* 02 — Colour & stripes */}
+          {/* 02 — Colours & stripes */}
           <section className="mb-10">
-            <SectionHeader num={2} title="Pick your colour & stripes" subtitle="Choose any cap colour. Add 0-3 sewn stripes around the side panels." />
+            <SectionHeader num={2} title="Customise your cap" subtitle="Pick colours for each part of the cap and choose your stripe count." />
+
             <div className="space-y-6">
-              <div className="flex flex-col md:flex-row gap-6">
-                <div className="flex-shrink-0">
-                  <ColorWheel value={capColor} onChange={setCapColor} />
+              {/* Colour pickers — 4 in a row */}
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="text-xs tracking-widest" style={{ fontFamily: 'JetBrains Mono, monospace', color: '#6b6452' }}>CAP COLOURS</div>
+                  <button onClick={matchAllToFront} className="text-xs underline" style={{ color: '#c2410c', fontFamily: 'JetBrains Mono, monospace' }}>
+                    MATCH ALL TO FRONT
+                  </button>
                 </div>
-                <div className="flex-1 space-y-4 min-w-0">
-                  <div className="flex items-stretch gap-3">
-                    <div className="flex flex-col items-center justify-center px-3 py-2 border-2" style={{ borderColor: '#1a1a1a' }}>
-                      <div className="w-16 h-16 border" style={{ backgroundColor: capColor, borderColor: '#1a1a1a' }} />
-                      <div className="text-[10px] tracking-widest mt-2" style={{ fontFamily: 'JetBrains Mono, monospace', color: '#6b6452' }}>CURRENT</div>
+
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {CAP_PARTS.map(part => (
+                    <div key={part.key} className="border-2 p-3" style={{ borderColor: '#1a1a1a' }}>
+                      <div className="text-xs tracking-widest mb-2" style={{ fontFamily: 'JetBrains Mono, monospace', color: '#6b6452' }}>
+                        {part.label.toUpperCase()}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="color"
+                          value={colors[part.key]}
+                          onChange={(e) => setColor(part.key, e.target.value)}
+                          className="w-12 h-12 cursor-pointer border-2 flex-shrink-0"
+                          style={{ borderColor: '#1a1a1a' }}
+                        />
+                        <input
+                          type="text"
+                          value={colors[part.key]}
+                          onChange={(e) => {
+                            let v = e.target.value.trim();
+                            if (!v.startsWith('#')) v = '#' + v;
+                            if (/^#[0-9a-fA-F]{0,6}$/.test(v)) setColor(part.key, v);
+                          }}
+                          className="bg-transparent text-sm w-full min-w-0 outline-none"
+                          style={{ fontFamily: 'JetBrains Mono, monospace' }}
+                          maxLength={7}
+                        />
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2 px-3 py-2 border-2 flex-1 min-w-0" style={{ borderColor: '#1a1a1a' }}>
-                      <span className="text-sm" style={{ fontFamily: 'JetBrains Mono, monospace', color: '#6b6452' }}>HEX</span>
-                      <input type="text" value={capColor}
-                        onChange={(e) => { let v = e.target.value.trim(); if (!v.startsWith('#')) v = '#' + v; setCapColor(v); }}
-                        className="bg-transparent flex-1 text-base min-w-0 outline-none" style={{ fontFamily: 'JetBrains Mono, monospace' }} maxLength={7} />
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-xs tracking-widest mb-2" style={{ fontFamily: 'JetBrains Mono, monospace', color: '#6b6452' }}>QUICK PICKS</div>
-                    <div className="flex flex-wrap gap-2">
-                      {QUICK_COLORS.map(c => (
-                        <button key={c} onClick={() => setCapColor(c)}
-                          className="w-10 h-10 transition-transform hover:scale-110"
-                          style={{ backgroundColor: c, border: capColor.toLowerCase() === c.toLowerCase() ? '3px solid #c2410c' : '2px solid #1a1a1a' }}
-                          title={c} />
-                      ))}
-                    </div>
-                  </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Quick picks — applies to front panel, others can match */}
+              <div>
+                <div className="text-xs tracking-widest mb-2" style={{ fontFamily: 'JetBrains Mono, monospace', color: '#6b6452' }}>QUICK PICKS (FRONT PANEL)</div>
+                <div className="flex flex-wrap gap-2">
+                  {QUICK_COLORS.map(c => (
+                    <button key={c} onClick={() => setColor('front', c)}
+                      className="w-10 h-10 transition-transform hover:scale-110"
+                      style={{ backgroundColor: c, border: colors.front.toLowerCase() === c.toLowerCase() ? '3px solid #c2410c' : '2px solid #1a1a1a' }}
+                      title={c} />
+                  ))}
                 </div>
               </div>
 
               <div className="border-t" style={{ borderColor: '#d6d0c0' }} />
 
+              {/* Stripes */}
               <div>
                 <div className="text-xs tracking-widest mb-3" style={{ fontFamily: 'JetBrains Mono, monospace', color: '#6b6452' }}>
-                  SEWN SIDE STRIPES — COLOUR CHOSEN AUTOMATICALLY TO COMPLEMENT THE CAP
+                  SEWN SIDE STRIPES
                 </div>
-                <div className="relative inline-block w-full md:w-80">
-                  <select value={stripeCount} onChange={(e) => setStripeCount(Number(e.target.value))}
-                    className="w-full px-4 py-3 pr-10 border-2 bg-transparent appearance-none cursor-pointer text-base"
-                    style={{ borderColor: '#1a1a1a', fontFamily: 'Anton, sans-serif', letterSpacing: '0.05em', backgroundColor: '#f5f1e8' }}>
-                    {STRIPE_OPTIONS.map(n => (
-                      <option key={n} value={n}>
-                        {n === 0 ? 'NO STRIPES' : `${n} STRIPE${n > 1 ? 'S' : ''}`}
-                      </option>
-                    ))}
-                  </select>
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
-                    <svg width="14" height="8" viewBox="0 0 14 8" fill="none">
-                      <path d="M1 1L7 7L13 1" stroke="#1a1a1a" strokeWidth="2" strokeLinecap="round" />
-                    </svg>
+                <div className="flex flex-wrap gap-3 items-end">
+                  <div className="relative inline-block w-full md:w-64">
+                    <select value={stripeCount} onChange={(e) => setStripeCount(Number(e.target.value))}
+                      className="w-full px-4 py-3 pr-10 border-2 bg-transparent appearance-none cursor-pointer text-base"
+                      style={{ borderColor: '#1a1a1a', fontFamily: 'Anton, sans-serif', letterSpacing: '0.05em', backgroundColor: '#f5f1e8' }}>
+                      {STRIPE_OPTIONS.map(n => (
+                        <option key={n} value={n}>
+                          {n === 0 ? 'NO STRIPES' : `${n} STRIPE${n > 1 ? 'S' : ''}`}
+                        </option>
+                      ))}
+                    </select>
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                      <svg width="14" height="8" viewBox="0 0 14 8" fill="none">
+                        <path d="M1 1L7 7L13 1" stroke="#1a1a1a" strokeWidth="2" strokeLinecap="round" />
+                      </svg>
+                    </div>
                   </div>
+                  {stripeCount > 0 && (
+                    <div className="border-2 p-3 flex items-center gap-2" style={{ borderColor: '#1a1a1a' }}>
+                      <div className="text-xs tracking-widest" style={{ fontFamily: 'JetBrains Mono, monospace', color: '#6b6452' }}>STRIPE COLOUR</div>
+                      <input type="color" value={stripeColor} onChange={(e) => setStripeColor(e.target.value)}
+                        className="w-10 h-10 cursor-pointer border flex-shrink-0" style={{ borderColor: '#1a1a1a' }} />
+                      <input type="text" value={stripeColor}
+                        onChange={(e) => { let v = e.target.value.trim(); if (!v.startsWith('#')) v = '#' + v; if (/^#[0-9a-fA-F]{0,6}$/.test(v)) setStripeColor(v); }}
+                        className="bg-transparent text-sm w-20 outline-none" style={{ fontFamily: 'JetBrains Mono, monospace' }} maxLength={7} />
+                    </div>
+                  )}
                 </div>
+              </div>
+
+              <div className="border-t" style={{ borderColor: '#d6d0c0' }} />
+
+              {/* Sandwich brim */}
+              <div>
+                <div className="text-xs tracking-widest mb-3" style={{ fontFamily: 'JetBrains Mono, monospace', color: '#6b6452' }}>
+                  SANDWICH BRIM
+                </div>
+                <div className="flex flex-wrap gap-3 items-center">
+                  <label className="flex items-center gap-3 border-2 p-3 cursor-pointer" style={{ borderColor: sandwichBrim ? '#c2410c' : '#1a1a1a', backgroundColor: sandwichBrim ? '#fff5ee' : 'transparent' }}>
+                    <input type="checkbox" checked={sandwichBrim} onChange={(e) => setSandwichBrim(e.target.checked)}
+                      className="w-5 h-5 cursor-pointer accent-orange-700" />
+                    <span className="text-sm" style={{ fontFamily: 'Anton, sans-serif', letterSpacing: '0.05em' }}>
+                      {sandwichBrim ? 'SANDWICH BRIM ON' : 'NO SANDWICH BRIM'}
+                    </span>
+                  </label>
+                  {sandwichBrim && (
+                    <div className="border-2 p-3 flex items-center gap-2" style={{ borderColor: '#1a1a1a' }}>
+                      <div className="text-xs tracking-widest" style={{ fontFamily: 'JetBrains Mono, monospace', color: '#6b6452' }}>UNDERSIDE COLOUR</div>
+                      <input type="color" value={sandwichColor} onChange={(e) => setSandwichColor(e.target.value)}
+                        className="w-10 h-10 cursor-pointer border flex-shrink-0" style={{ borderColor: '#1a1a1a' }} />
+                      <input type="text" value={sandwichColor}
+                        onChange={(e) => { let v = e.target.value.trim(); if (!v.startsWith('#')) v = '#' + v; if (/^#[0-9a-fA-F]{0,6}$/.test(v)) setSandwichColor(v); }}
+                        className="bg-transparent text-sm w-20 outline-none" style={{ fontFamily: 'JetBrains Mono, monospace' }} maxLength={7} />
+                    </div>
+                  )}
+                </div>
+                {sandwichBrim && (
+                  <p className="text-xs mt-2" style={{ color: '#6b6452', fontStyle: 'italic' }}>
+                    A contrasting colour strip visible along the underside edge of the brim.
+                  </p>
+                )}
               </div>
             </div>
           </section>
@@ -352,7 +448,6 @@ export default function CapMockupGenerator() {
 
             {result && !generating && (
               <div>
-                {/* Product shot */}
                 <div className="border-2" style={{ borderColor: '#1a1a1a' }}>
                   <img src={result.imageUrl} alt="Cap preview" className="w-full block" />
                 </div>
@@ -371,7 +466,7 @@ export default function CapMockupGenerator() {
                   </span>
                 </div>
 
-                {/* See it on models — button + results */}
+                {/* See it on models */}
                 <div className="mt-8 pt-6 border-t-2" style={{ borderColor: '#1a1a1a' }}>
                   <div className="flex items-center justify-between flex-wrap gap-3 mb-5">
                     <div>
@@ -448,146 +543,4 @@ export default function CapMockupGenerator() {
       </div>
     </div>
   );
-}
-
-// ── Hue wheel + saturation/value square colour picker ──────────────────────
-function ColorWheel({ value, onChange }) {
-  const wheelRef = useRef(null);
-  const svRef = useRef(null);
-  const initial = useMemo(() => hexToHsv(value), []);
-  const [hsv, setHsv] = useState(initial);
-  const lastEmitted = useRef(value);
-
-  useEffect(() => {
-    if (value.toLowerCase() === lastEmitted.current.toLowerCase()) return;
-    const newHsv = hexToHsv(value);
-    if (newHsv) setHsv(newHsv);
-  }, [value]);
-
-  const updateHsv = (next) => {
-    setHsv(next);
-    const hex = hsvToHex(next.h, next.s, next.v);
-    lastEmitted.current = hex;
-    onChange(hex);
-  };
-
-  const handleWheelPointer = (e) => {
-    const rect = wheelRef.current.getBoundingClientRect();
-    const cx = rect.width / 2;
-    const cy = rect.height / 2;
-    const x = e.clientX - rect.left - cx;
-    const y = e.clientY - rect.top - cy;
-    let angle = Math.atan2(y, x) * 180 / Math.PI;
-    angle = (angle + 360) % 360;
-    updateHsv({ ...hsv, h: angle });
-  };
-
-  const handleSvPointer = (e) => {
-    const rect = svRef.current.getBoundingClientRect();
-    const x = clamp((e.clientX - rect.left) / rect.width, 0, 1);
-    const y = clamp((e.clientY - rect.top) / rect.height, 0, 1);
-    updateHsv({ ...hsv, s: x, v: 1 - y });
-  };
-
-  const dragHandler = (handler) => (e) => {
-    e.preventDefault();
-    handler(e);
-    const move = (ev) => handler(ev);
-    const up = () => {
-      window.removeEventListener('pointermove', move);
-      window.removeEventListener('pointerup', up);
-    };
-    window.addEventListener('pointermove', move);
-    window.addEventListener('pointerup', up);
-  };
-
-  const markerR = 90;
-  const markerX = 100 + markerR * Math.cos(hsv.h * Math.PI / 180);
-  const markerY = 100 + markerR * Math.sin(hsv.h * Math.PI / 180);
-  const pureHueHex = hsvToHex(hsv.h, 1, 1);
-
-  return (
-    <div className="flex flex-col items-center gap-3">
-      <div className="relative" style={{ width: 200, height: 200 }}>
-        <div ref={wheelRef} onPointerDown={dragHandler(handleWheelPointer)}
-          className="absolute inset-0 cursor-crosshair"
-          style={{
-            borderRadius: '50%',
-            background: 'conic-gradient(from 90deg, red, yellow, lime, cyan, blue, magenta, red)',
-            WebkitMask: 'radial-gradient(circle, transparent 60px, black 62px, black 100px, transparent 102px)',
-            mask: 'radial-gradient(circle, transparent 60px, black 62px, black 100px, transparent 102px)',
-            border: '2px solid #1a1a1a',
-            boxSizing: 'border-box',
-          }} />
-        <div className="absolute pointer-events-none"
-          style={{
-            left: `${markerX}px`, top: `${markerY}px`, width: 14, height: 14,
-            transform: 'translate(-50%, -50%)', borderRadius: '50%',
-            backgroundColor: pureHueHex, border: '2px solid #1a1a1a',
-            boxShadow: '0 0 0 1.5px white inset',
-          }} />
-        <div ref={svRef} onPointerDown={dragHandler(handleSvPointer)}
-          className="absolute cursor-crosshair"
-          style={{
-            left: 60, top: 60, width: 80, height: 80,
-            background: `linear-gradient(to top, #000, transparent), linear-gradient(to right, #fff, ${pureHueHex})`,
-            border: '2px solid #1a1a1a', boxSizing: 'border-box',
-          }}>
-          <div className="pointer-events-none"
-            style={{
-              position: 'absolute',
-              left: `${hsv.s * 100}%`, top: `${(1 - hsv.v) * 100}%`,
-              width: 12, height: 12, transform: 'translate(-50%, -50%)',
-              borderRadius: '50%', border: '2px solid white',
-              boxShadow: '0 0 0 1.5px #1a1a1a',
-            }} />
-        </div>
-      </div>
-      <div className="text-[10px] tracking-widest" style={{ fontFamily: 'JetBrains Mono, monospace', color: '#6b6452' }}>
-        DRAG WHEEL FOR HUE · DRAG CENTRE FOR SHADE
-      </div>
-    </div>
-  );
-}
-
-function clamp(n, lo, hi) { return Math.max(lo, Math.min(hi, n)); }
-
-function hsvToHex(h, s, v) {
-  const c = v * s;
-  const hp = h / 60;
-  const x = c * (1 - Math.abs((hp % 2) - 1));
-  let r = 0, g = 0, b = 0;
-  if      (hp >= 0 && hp < 1) { r = c; g = x; b = 0; }
-  else if (hp >= 1 && hp < 2) { r = x; g = c; b = 0; }
-  else if (hp >= 2 && hp < 3) { r = 0; g = c; b = x; }
-  else if (hp >= 3 && hp < 4) { r = 0; g = x; b = c; }
-  else if (hp >= 4 && hp < 5) { r = x; g = 0; b = c; }
-  else                        { r = c; g = 0; b = x; }
-  const m = v - c;
-  const toHex = (n) => Math.round((n + m) * 255).toString(16).padStart(2, '0');
-  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
-}
-
-function hexToHsv(hex) {
-  if (!hex || typeof hex !== 'string') return { h: 0, s: 0, v: 0 };
-  let c = hex.replace('#', '');
-  if (c.length === 3) c = c.split('').map(ch => ch + ch).join('');
-  if (c.length !== 6) return { h: 0, s: 0, v: 0 };
-  const r = parseInt(c.slice(0, 2), 16) / 255;
-  const g = parseInt(c.slice(2, 4), 16) / 255;
-  const b = parseInt(c.slice(4, 6), 16) / 255;
-  const max = Math.max(r, g, b);
-  const min = Math.min(r, g, b);
-  const d = max - min;
-  let h = 0;
-  if (d !== 0) {
-    if      (max === r) h = ((g - b) / d) % 6;
-    else if (max === g) h = (b - r) / d + 2;
-    else                h = (r - g) / d + 4;
-    h *= 60;
-    if (h < 0) h += 360;
-  }
-  const s = max === 0 ? 0 : d / max;
-  const v = max;
-  return { h, s, v };
 }
