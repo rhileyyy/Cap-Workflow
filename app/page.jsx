@@ -42,7 +42,7 @@ const PROMPT = {
   logoLockdown: 'CRITICAL: the provided front design is the ONLY decoration on the front panel. Reproduce it EXACTLY — same shapes, colours, proportions, text characters. Do NOT invent, modify, redraw, stylise, or add to the logo. Do NOT add extra graphics, logos, text, badges, or patches anywhere. Do NOT duplicate the logo. Render as raised dimensional high quality embroidery with visible thread texture and soft shadow on the fabric. Centre the logo on the front panel.',
 
   // 4. NEGATIVE INSTRUCTIONS — folded in since Nano Banana has no negative_prompt field
-  avoid: 'Avoid: flat brim, low-profile, baseball or fitted cap, dad hat, decorative stiching on brim, mesh on front panel, foam on side panels, panel bleeding, multiple caps, model, person, hands, mannequin, extra brims, busy or ed background, props, harsh shadows, lens flare, cartoon, illustration, sketch.',
+  avoid: 'Avoid: flat brim, low-profile, baseball or fitted cap, dad hat,visible stiching on top of brim, mesh on front panel, foam on side panels, panel bleeding, multiple caps, model, person, hands, mannequin, extra brims, busy or ed background, props, harsh shadows, lens flare, cartoon, illustration, sketch.',
 
   // 5. LIGHTING
   lighting: 'Lighting: soft directional studio light from upper-left, gentle shadows on the right of the crown, subtle shadow under the brim. Soft-box quality, no glare, no rim lighting, no ed gels.',
