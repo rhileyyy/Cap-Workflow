@@ -25,6 +25,9 @@ export async function POST(request) {
     const formData = await request.formData();
     const prompt    = formData.get('prompt');
     const frontFile = formData.get('design_front');
+    const frontEmphasisFile = formData.get('design_front_emphasis');
+    const leftFile  = formData.get('design_leftSide');
+    const rightFile = formData.get('design_rightSide');
     const leftFile  = formData.get('design_leftSide');
     const rightFile = formData.get('design_rightSide');
 
@@ -37,13 +40,25 @@ export async function POST(request) {
     // telling Nano Banana what role that image plays.
     const referenceImages = [];
 
-    const frontUrl = await uploadToBlob(frontFile, 'front');
+   const frontUrl = await uploadToBlob(frontFile, 'front');
     referenceImages.push({
       image: frontUrl,
-      text: 'Front panel logo — embroider this design exactly as shown, prominently centered on the front foam panel of the cap.',
+      text: 'FRONT PANEL LOGO REFERENCE — copy this image pixel-by-pixel onto the cap front panel as a verbatim exact replica embroidered design. Do not invent or substitute.',
       mime_type: frontFile.type || 'image/png',
     });
 
+    // Send the SAME front logo as a second reference under a different label.
+    // This nudges Nano Banana Pro to weight the logo reference more heavily
+    // and is a known trick for improving exact-copy fidelity.
+    if (frontEmphasisFile && frontEmphasisFile.size > 0) {
+      const frontEmphasisUrl = await uploadToBlob(frontEmphasisFile, 'front-emphasis');
+      referenceImages.push({
+        image: frontEmphasisUrl,
+        text: 'EMPHASIS REFERENCE — same logo as the previous reference. The output cap front panel must contain THIS exact design, not a different one.',
+        mime_type: frontEmphasisFile.type || 'image/png',
+      });
+    }
+    
     if (leftFile && leftFile.size > 0) {
       const leftUrl = await uploadToBlob(leftFile, 'left');
       referenceImages.push({
@@ -72,7 +87,7 @@ export async function POST(request) {
         prompt: prompt,
         reference_images: referenceImages,
         aspect_ratio: '1:1',
-        resolution: '2K',
+        resolution: '1K',
       }),
     });
 
