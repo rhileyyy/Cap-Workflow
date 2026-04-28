@@ -172,7 +172,7 @@ export async function POST(request) {
         thinkingConfig: {
           // 'minimal' = lowest latency while still using reasoning
           // Change to 'high' for higher quality at the cost of more wait time
-          thinkingLevel: 'minimal',
+          thinkingLevel: 'high',
         },
       },
     });
