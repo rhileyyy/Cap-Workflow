@@ -1,14 +1,14 @@
 'use client';
 
-import { useState, useRef } from 'react';
-import { Upload, Check, Loader2, RefreshCw, Sparkles, Users, Download } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { Upload, Check, Loader2, RefreshCw, Sparkles, Users, Download, Copy, CheckCheck } from 'lucide-react';
 
 const API_ENDPOINT = '/api/generate';
 
 const SIDES = [
-  { key: 'front',     label: 'Front Panel', required: true,  placement: 'front panel, centered prominently' },
-  { key: 'leftSide',  label: 'Left Side',   required: false, placement: 'left side mesh panel as a smaller embroidered accent, sitting on top of any stripes' },
-  { key: 'rightSide', label: 'Right Side',  required: false, placement: 'right side mesh panel as a smaller embroidered accent, sitting on top of any stripes' },
+  { key: 'front',     label: 'Front Panel', required: true  },
+  { key: 'leftSide',  label: 'Left Side',   required: false },
+  { key: 'rightSide', label: 'Right Side',  required: false },
 ];
 
 const QUICK_COLORS = [
@@ -21,42 +21,37 @@ const STRIPE_OPTIONS = [0, 1, 2, 3];
 
 const CAP_PARTS = [
   { key: 'front',    label: 'Front' },
-  { key: 'mesh',     label: 'Mesh' },
-  { key: 'brim',     label: 'Brim' },
-  { key: 'snapback', label: 'Snap' },
+  { key: 'mesh',     label: 'Mesh'  },
+  { key: 'brim',     label: 'Brim'  },
+  { key: 'snapback', label: 'Snap'  },
 ];
 
-// ── Prompts ─────────────────────────────────────────────────────────────────
-const PROMPT = {
-  subject: 'Three-quarter front view of a high-crown structured trucker cap at a 30-degree angle from the front-right, eye-level, sitting upright on a flat surface.',
-  construction: 'Construction: single continuous front face panel — one solid piece of structured fabric, NO visible centre seam, smooth uninterrupted front. Three rear panels are mesh with visible woven texture. Sharp vertical seam where front meets mesh. Pre-curved brim with downward arc — brim surface is COMPLETELY CLEAN, absolutely NO stitching, NO stitch lines, NO topstitching, NO contrast stitching, NO thread visible anywhere on the brim top or edge. Smooth uninterrupted fabric only. Squatchee button on top. Snapback closure at back.',
-  logoLockdown: 'CRITICAL LOGO RULE: The provided reference image IS the logo. It must appear on the front panel as an EXACT pixel-perfect copy — identical shapes, colours, text characters, and proportions. Do NOT redraw, reinterpret, stylise, simplify, or substitute ANY part of the logo. Do NOT invent additional graphics, text, badges, or patches. Every logo on the cap is rendered as 3D puff embroidery — visibly raised above the cap surface with real physical depth and elevation. Individual thread stitches are visible in the embroidery. Each embroidered element casts a natural shadow onto the cap fabric beneath it.',
-  avoid: 'Avoid: flat brim, low-profile, baseball or fitted cap, dad hat, mesh on front panel, panel bleeding, multiple caps, model, person, hands, mannequin, extra brims, busy or coloured background, props, harsh shadows, lens flare, cartoon, illustration, sketch, stitching on brim, topstitching on brim, stitch lines on brim, contrast stitching, flat printed logos, screen printed logos.',
-  lighting: 'Lighting: soft directional studio light from upper-left, gentle shadows on crown right side and under brim. Soft-box quality, no glare, no coloured gels.',
-  background: 'Background: pure white seamless studio backdrop, barely-perceptible cool gradient near the bottom. Soft natural contact shadow beneath the cap, diffuse not hard-edged. No props, no other objects.',
-  style: 'Style: 85mm lens at f/4, shallow depth of field with cap fully sharp. Ultra detail, fabric and mesh texture visible, 3D embroidery depth and thread texture visible. Clean ecommerce product photography.',
-};
-
-const MODEL_TYPES = [
-  { key: 'male',   label: 'Men',   prompt: 'Portrait of a rugged Australian country man in his 30s wearing a trucker cap. Weathered, sun-tanned face, relaxed confident expression. Simple work shirt. Standing outdoors in the Australian outback — red dirt, dry golden grass, sparse gum trees, clear blue sky. The cap logo faces the camera and is clearly readable. Natural golden-hour sunlight. Shot on 85mm lens, shallow depth of field, person and cap sharp, background softly blurred.' },
-  { key: 'female', label: 'Women', prompt: 'Portrait of a young Australian country woman in her late 20s wearing a trucker cap. Natural sun-kissed look, warm genuine smile. Simple casual top. Standing outdoors in the Australian outback — red earth, golden grassland, scattered eucalyptus trees, wide open sky. The cap logo faces the camera and is clearly readable. Natural golden-hour sunlight. Shot on 85mm lens, shallow depth of field, person and cap sharp, background softly blurred.' },
-  { key: 'child',  label: 'Kids',  prompt: 'Portrait of a cheerful Australian country kid around 10 years old wearing a trucker cap. Big natural grin, sun-tanned face. Simple t-shirt. Standing outdoors in the Australian outback — red dust, dry golden grass, gum trees, bright blue sky. The cap logo faces the camera and is clearly readable. Warm afternoon sunlight. Shot on 85mm lens, shallow depth of field, child and cap sharp, background softly blurred.' },
+// Loading steps — shown while the backend generates. Durations are estimates
+// that match real Nano Banana render times so the animation feels accurate.
+const LOADING_STEPS = [
+  { label: 'Uploading your design',       ms: 2500  },
+  { label: 'Sending to render engine',    ms: 5000  },
+  { label: 'Processing your cap preview', ms: 15000 },
+  { label: 'Almost ready',               ms: 99999 }, // stays until done
 ];
 
 export default function CapMockupGenerator() {
-  const [designs, setDesigns] = useState({ front: null, leftSide: null, rightSide: null });
-  const [colors, setColors] = useState({ front: '#1a1a1a', mesh: '#1a1a1a', brim: '#1a1a1a', snapback: '#1a1a1a' });
+  const [designs, setDesigns]         = useState({ front: null, leftSide: null, rightSide: null });
+  const [colors, setColors]           = useState({ front: '#1a1a1a', mesh: '#1a1a1a', brim: '#1a1a1a', snapback: '#1a1a1a' });
   const [stripeCount, setStripeCount] = useState(0);
   const [stripeColor, setStripeColor] = useState('#ffffff');
-  const [sandwichBrim, setSandwichBrim] = useState(false);
+  const [sandwichBrim, setSandwichBrim]   = useState(false);
   const [sandwichColor, setSandwichColor] = useState('#c2410c');
-  const [generating, setGenerating] = useState(false);
-  const [progress, setProgress] = useState('');
-  const [result, setResult] = useState(null);
+  const [generating, setGenerating]       = useState(false);
+  const [loadingStep, setLoadingStep]     = useState(0);
+  const [result, setResult]               = useState(null);
+  const [error, setError]                 = useState(null);
   const [generatingModels, setGeneratingModels] = useState(false);
-  const [modelProgress, setModelProgress] = useState('');
-  const [modelShots, setModelShots] = useState(null);
+  const [modelProgress, setModelProgress]       = useState('');
+  const [modelShots, setModelShots]             = useState(null);
+  const [copied, setCopied]                     = useState(false);
   const fileInputRefs = useRef({});
+  const stepTimers    = useRef([]);
 
   const handleFile = (sideKey, file) => {
     if (!file) return;
@@ -65,94 +60,127 @@ export default function CapMockupGenerator() {
     reader.onload = (e) => setDesigns(prev => ({ ...prev, [sideKey]: { file, preview: e.target.result } }));
     reader.readAsDataURL(file);
   };
-  const clearDesign = (sideKey) => setDesigns(prev => ({ ...prev, [sideKey]: null }));
-  const canGenerate = !!designs.front && !generating;
-  const setColor = (part, value) => setColors(prev => ({ ...prev, [part]: value }));
-  const matchAllToFront = () => setColors({ front: colors.front, mesh: colors.front, brim: colors.front, snapback: colors.front });
+  const clearDesign   = (sideKey) => setDesigns(prev => ({ ...prev, [sideKey]: null }));
+  const canGenerate   = !!designs.front && !generating;
+  const setColor      = (part, value) => setColors(prev => ({ ...prev, [part]: value }));
+  const matchAll      = () => setColors({ front: colors.front, mesh: colors.front, brim: colors.front, snapback: colors.front });
 
-  const buildColourLine = () => {
-    let line = `Front panel: ${colors.front}. Mesh panels: ${colors.mesh}. Brim: ${colors.brim}. Snapback: ${colors.snapback}.`;
-    if (sandwichBrim) line += ` Sandwich brim — contrasting ${sandwichColor} layer visible along the underside edge of the brim.`;
-    return line;
+  // ── Animated loading steps ─────────────────────────────────────────────
+  const startLoadingAnimation = () => {
+    stepTimers.current.forEach(clearTimeout);
+    stepTimers.current = [];
+    setLoadingStep(0);
+    let elapsed = 0;
+    LOADING_STEPS.slice(0, -1).forEach((step, i) => {
+      elapsed += step.ms;
+      const t = setTimeout(() => setLoadingStep(i + 1), elapsed);
+      stepTimers.current.push(t);
+    });
   };
 
-  const buildPrompt = () => {
-    const stripeLine = stripeCount === 0
-      ? 'No stripes — clean unbroken mesh on sides.'
-      : `${stripeCount} horizontal sewn-in flat ribbon stripe${stripeCount > 1 ? 's' : ''} in ${stripeColor} on each side mesh panel, parallel to brim. Tightly grouped — 3-4mm gap between stripes, almost touching. Middle third of panel height, symmetrical. Flat ribbon tape through mesh.`;
-    const sideMentions = [];
-    if (designs.leftSide) sideMentions.push('smaller 3D embroidered logo on LEFT side mesh panel near the front-mesh seam');
-    if (designs.rightSide) sideMentions.push('smaller 3D embroidered logo on RIGHT side mesh panel near the front-mesh seam');
-    const sideLogoLine = sideMentions.length > 0
-      ? `Also: ${sideMentions.join(', and ')}. Each side logo reproduced exactly from its reference, rendered as raised 3D puff embroidery with visible thread texture, sitting on top of any stripes.`
-      : '';
-    return [PROMPT.subject, PROMPT.construction, buildColourLine(), PROMPT.logoLockdown, sideLogoLine, stripeLine, PROMPT.lighting, PROMPT.background, PROMPT.style, PROMPT.avoid].filter(Boolean).join(' ');
+  const stopLoadingAnimation = () => {
+    stepTimers.current.forEach(clearTimeout);
+    stepTimers.current = [];
   };
 
-  const buildModelPrompt = (mt) => {
-    let capDesc = `The trucker cap has a ${colors.front} front panel, ${colors.mesh} mesh sides, ${colors.brim} brim, and ${colors.snapback} snapback. Single-piece structured front, pre-curved brim with no stitching visible on brim.`;
-    if (sandwichBrim) capDesc += ` Sandwich brim with ${sandwichColor} underside edge.`;
-    const stripePart = stripeCount === 0 ? '' : ` ${stripeCount} thin horizontal ${stripeColor} stripe${stripeCount > 1 ? 's' : ''} on each side panel, tightly grouped.`;
-    return `${mt.prompt} ${capDesc}${stripePart} CRITICAL: the cap front panel displays the provided logo as an EXACT pixel-perfect copy — same shapes, colours, text. Do NOT invent a different logo. The logo is rendered as 3D puff embroidery with visible raised depth and thread texture. The logo must be clearly visible and readable.`;
+  useEffect(() => () => stopLoadingAnimation(), []);
+
+  // ── Build FormData with structured settings (NO prompt) ──────────────────
+  const buildFormData = (overrides = {}) => {
+    const fd = new FormData();
+    fd.append('mode',          overrides.mode       || 'product');
+    fd.append('modelKey',      overrides.modelKey   || 'male');
+    fd.append('color_front',   colors.front);
+    fd.append('color_mesh',    colors.mesh);
+    fd.append('color_brim',    colors.brim);
+    fd.append('color_snapback', colors.snapback);
+    fd.append('stripeCount',   String(stripeCount));
+    fd.append('stripeColor',   stripeColor);
+    fd.append('sandwichBrim',  String(sandwichBrim));
+    fd.append('sandwichColor', sandwichColor);
+    fd.append('design_front',  designs.front.file);
+    if (designs.leftSide)  fd.append('design_leftSide',  designs.leftSide.file);
+    if (designs.rightSide) fd.append('design_rightSide', designs.rightSide.file);
+    return fd;
   };
 
+  // ── Product shot ──────────────────────────────────────────────────────
   const handleGenerate = async () => {
     if (!designs.front) return;
-    setGenerating(true); setResult(null); setModelShots(null);
+    setGenerating(true);
+    setResult(null);
+    setModelShots(null);
+    setError(null);
+    startLoadingAnimation();
+
     try {
-      setProgress('Preparing your design…');
-      const fd = new FormData();
-      fd.append('prompt', buildPrompt());
-      fd.append('mode', 'product');
-      fd.append('design_front', designs.front.file);
-      if (designs.leftSide) fd.append('design_leftSide', designs.leftSide.file);
-      if (designs.rightSide) fd.append('design_rightSide', designs.rightSide.file);
-      setProgress('Creating your preview…');
-      const res = await fetch(API_ENDPOINT, { method: 'POST', body: fd });
-      if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.error || `Server returned ${res.status}`); }
-      setResult(await res.json());
-    } catch (err) { alert('Something went wrong: ' + err.message); }
-    finally { setGenerating(false); setProgress(''); }
+      const res = await fetch(API_ENDPOINT, { method: 'POST', body: buildFormData() });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `Server returned ${res.status}`);
+      setResult(data); // { imageUrl, shareId }
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      stopLoadingAnimation();
+      setGenerating(false);
+    }
   };
 
+  // ── Model shots ───────────────────────────────────────────────────────
   const handleModelShots = async () => {
     if (!designs.front) return;
-    setGeneratingModels(true); setModelShots(null); setModelProgress('Creating lifestyle previews…');
+    setGeneratingModels(true);
+    setModelShots(null);
+    setModelProgress('Creating 3 lifestyle previews…');
+
     try {
-      const results = await Promise.all(MODEL_TYPES.map(async (mt) => {
-        const fd = new FormData();
-        fd.append('prompt', buildModelPrompt(mt));
-        fd.append('mode', 'model');
-        fd.append('design_front', designs.front.file);
+      const modelKeys = ['male', 'female', 'child'];
+      const labels    = ['Men', 'Women', 'Kids'];
+      const results   = await Promise.all(modelKeys.map(async (key, i) => {
+        const fd = buildFormData({ mode: 'model', modelKey: key });
         const res = await fetch(API_ENDPOINT, { method: 'POST', body: fd });
-        if (!res.ok) { const d = await res.json().catch(() => ({})); return { key: mt.key, label: mt.label, error: d.error || `Failed` }; }
-        return { key: mt.key, label: mt.label, imageUrl: (await res.json()).imageUrl };
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) return { key, label: labels[i], error: data.error || 'Failed' };
+        return { key, label: labels[i], imageUrl: data.imageUrl, shareId: data.shareId };
       }));
       setModelShots(results);
-    } catch (err) { alert('Something went wrong: ' + err.message); }
-    finally { setGeneratingModels(false); setModelProgress(''); }
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setGeneratingModels(false);
+      setModelProgress('');
+    }
   };
 
-  // ── Render ────────────────────────────────────────────────────────────
+  // ── Copy share link ───────────────────────────────────────────────────
+  const copyShareLink = (shareId) => {
+    if (!shareId) return;
+    const origin = window.location.origin;
+    navigator.clipboard.writeText(`${origin}/share/${shareId}`);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2500);
+  };
+
+  // ── Render ─────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen w-full" style={{ backgroundColor: '#f5f1e8', fontFamily: 'Newsreader, serif', color: '#1a1a1a' }}>
       <div className="grain min-h-screen">
 
-        {/* ── Header ─────────────────────────────────────────────────── */}
-        <header className="px-6 py-6 md:py-8 max-w-[1440px] mx-auto">
+        {/* Header */}
+        <header className="px-6 py-6 max-w-[1440px] mx-auto">
           <div className="text-[10px] tracking-[0.3em] mb-2" style={{ fontFamily: 'JetBrains Mono, monospace', color: '#6b6452' }}>
             CUSTOM CAP STUDIO
           </div>
           <h1 className="text-4xl md:text-5xl leading-[0.95]" style={{ fontFamily: 'Anton, sans-serif' }}>PREVIEW YOUR CAP</h1>
         </header>
 
-        {/* ── Two-column layout ──────────────────────────────────────── */}
+        {/* Two-column layout */}
         <div className="max-w-[1440px] mx-auto px-6 pb-12 flex flex-col lg:flex-row gap-6">
 
-          {/* ════ LEFT PANEL — scrollable inputs ═════════════════════ */}
-          <div className="w-full lg:w-[440px] xl:w-[480px] flex-shrink-0 space-y-5">
+          {/* ═══ LEFT PANEL ═══════════════════════════════════════════ */}
+          <div className="w-full lg:w-[440px] xl:w-[480px] flex-shrink-0 space-y-4">
 
-            {/* ── Upload logos ────────────────────────────────────────── */}
+            {/* Logos */}
             <div className="bg-white border p-4" style={{ borderColor: '#d6d0c0' }}>
               <div className="text-[10px] tracking-[0.2em] mb-3" style={{ fontFamily: 'JetBrains Mono, monospace', color: '#6b6452' }}>LOGOS</div>
               <div className="space-y-2">
@@ -164,7 +192,7 @@ export default function CapMockupGenerator() {
                       onDragOver={(e) => { e.preventDefault(); e.currentTarget.style.backgroundColor = '#fef6f0'; }}
                       onDragLeave={(e) => { e.preventDefault(); e.currentTarget.style.backgroundColor = ''; }}
                       onDrop={(e) => { e.preventDefault(); e.currentTarget.style.backgroundColor = ''; handleFile(side.key, e.dataTransfer.files?.[0]); }}
-                      className="flex items-center gap-3 p-2.5 cursor-pointer rounded-sm transition-colors"
+                      className="flex items-center gap-3 p-2.5 cursor-pointer"
                       style={{ border: `1px ${design ? 'solid' : 'dashed'} ${design ? '#d6d0c0' : side.required ? '#1a1a1a' : '#c4bfb0'}` }}
                     >
                       <input ref={el => fileInputRefs.current[side.key] = el} type="file" accept="image/*" className="hidden"
@@ -201,20 +229,17 @@ export default function CapMockupGenerator() {
               </div>
             </div>
 
-            {/* ── Cap colours ─────────────────────────────────────────── */}
+            {/* Cap colours */}
             <div className="bg-white border p-4" style={{ borderColor: '#d6d0c0' }}>
               <div className="flex items-center justify-between mb-3">
                 <div className="text-[10px] tracking-[0.2em]" style={{ fontFamily: 'JetBrains Mono, monospace', color: '#6b6452' }}>CAP COLOURS</div>
-                <button onClick={matchAllToFront} className="text-[10px] tracking-wider hover:underline" style={{ color: '#c2410c', fontFamily: 'JetBrains Mono, monospace' }}>
-                  MATCH ALL →
-                </button>
+                <button onClick={matchAll} className="text-[10px] hover:underline" style={{ color: '#c2410c', fontFamily: 'JetBrains Mono, monospace' }}>MATCH ALL →</button>
               </div>
               <div className="grid grid-cols-4 gap-2">
                 {CAP_PARTS.map(part => (
                   <div key={part.key} className="text-center">
-                    <input type="color" value={colors[part.key]} onChange={(e) => setColor(part.key, e.target.value)}
-                      className="w-full h-12 cursor-pointer" />
-                    <div className="text-[9px] tracking-[0.15em] mt-1.5" style={{ fontFamily: 'JetBrains Mono, monospace', color: '#6b6452' }}>
+                    <input type="color" value={colors[part.key]} onChange={(e) => setColor(part.key, e.target.value)} className="w-full h-12 cursor-pointer" />
+                    <div className="text-[9px] tracking-[0.12em] mt-1" style={{ fontFamily: 'JetBrains Mono, monospace', color: '#6b6452' }}>
                       {part.label.toUpperCase()}
                     </div>
                   </div>
@@ -225,23 +250,21 @@ export default function CapMockupGenerator() {
                   const sel = colors.front.toLowerCase() === c.toLowerCase();
                   return (
                     <button key={c} onClick={() => setColor('front', c)} className="w-7 h-7"
-                      style={{ backgroundColor: c, border: sel ? '2px solid #c2410c' : '1px solid rgba(0,0,0,0.15)', boxShadow: sel ? '0 0 0 1.5px #f5f1e8 inset' : 'none' }}
-                      title={c} />
+                      style={{ backgroundColor: c, border: sel ? '2px solid #c2410c' : '1px solid rgba(0,0,0,0.15)', boxShadow: sel ? '0 0 0 1.5px #f5f1e8 inset' : 'none' }} title={c} />
                   );
                 })}
               </div>
             </div>
 
-            {/* ── Stripes ─────────────────────────────────────────────── */}
+            {/* Stripes */}
             <div className="bg-white border p-4" style={{ borderColor: '#d6d0c0' }}>
               <div className="text-[10px] tracking-[0.2em] mb-3" style={{ fontFamily: 'JetBrains Mono, monospace', color: '#6b6452' }}>SIDE STRIPES</div>
               <div className="flex gap-2 mb-2">
                 {STRIPE_OPTIONS.map(n => (
                   <button key={n} onClick={() => setStripeCount(n)}
-                    className="flex-1 py-2.5 text-center text-sm transition-colors"
+                    className="flex-1 py-2.5 text-center text-sm"
                     style={{
-                      fontFamily: 'Anton, sans-serif',
-                      letterSpacing: '0.03em',
+                      fontFamily: 'Anton, sans-serif', letterSpacing: '0.03em',
                       backgroundColor: stripeCount === n ? '#1a1a1a' : 'transparent',
                       color: stripeCount === n ? '#f5f1e8' : '#1a1a1a',
                       border: `1px solid ${stripeCount === n ? '#1a1a1a' : '#d6d0c0'}`,
@@ -261,7 +284,7 @@ export default function CapMockupGenerator() {
               )}
             </div>
 
-            {/* ── Sandwich brim ────────────────────────────────────────── */}
+            {/* Sandwich brim */}
             <div className="bg-white border p-4" style={{ borderColor: '#d6d0c0' }}>
               <div className="flex items-center justify-between">
                 <div className="text-[10px] tracking-[0.2em]" style={{ fontFamily: 'JetBrains Mono, monospace', color: '#6b6452' }}>SANDWICH BRIM</div>
@@ -283,58 +306,88 @@ export default function CapMockupGenerator() {
               )}
             </div>
 
-            {/* ── Sticky CTA button ───────────────────────────────────── */}
-            <div className="sticky bottom-4 z-10 pt-2">
+            {/* Sticky CTA */}
+            <div className="sticky bottom-4 z-10">
               <button onClick={handleGenerate} disabled={!canGenerate}
-                className="w-full py-4 flex items-center justify-center gap-2 text-lg disabled:opacity-40 disabled:cursor-not-allowed shadow-lg"
-                style={{
-                  backgroundColor: '#c2410c',
-                  color: '#ffffff',
-                  fontFamily: 'Anton, sans-serif',
-                  letterSpacing: '0.08em',
-                  border: 'none',
-                }}>
+                className="w-full py-4 flex items-center justify-center gap-2 text-lg disabled:opacity-40 disabled:cursor-not-allowed shadow-xl"
+                style={{ backgroundColor: '#c2410c', color: '#ffffff', fontFamily: 'Anton, sans-serif', letterSpacing: '0.08em' }}>
                 {generating ? (<><Loader2 size={20} className="animate-spin" /> WORKING…</>) : (<><Sparkles size={20} /> CREATE PREVIEW</>)}
               </button>
             </div>
           </div>
 
-          {/* ════ RIGHT PANEL — sticky preview ══════════════════════ */}
+          {/* ═══ RIGHT PANEL ══════════════════════════════════════════ */}
           <div className="flex-1 min-w-0">
-            <div className="lg:sticky lg:top-6">
+            <div className="lg:sticky lg:top-6 space-y-4">
 
               {/* Empty state */}
-              {!result && !generating && (
+              {!result && !generating && !error && (
                 <div className="border bg-white flex items-center justify-center" style={{ borderColor: '#d6d0c0', minHeight: '400px' }}>
                   <div className="text-center p-8">
                     <div className="w-16 h-16 mx-auto mb-4 flex items-center justify-center rounded-full" style={{ backgroundColor: '#f0ece2' }}>
                       <Sparkles size={24} style={{ color: '#a39d8d' }} />
                     </div>
                     <p className="text-sm" style={{ color: '#6b6452' }}>
-                      Upload a logo and hit <b>Create Preview</b> to see your cap.
+                      Upload a logo and hit <b style={{ color: '#c2410c' }}>Create Preview</b> to see your cap.
                     </p>
                   </div>
                 </div>
               )}
 
-              {/* Loading state */}
+              {/* Error state */}
+              {error && !generating && (
+                <div className="border p-6" style={{ borderColor: '#a83232', backgroundColor: '#fdf0f0' }}>
+                  <p className="text-sm font-medium mb-1" style={{ color: '#a83232', fontFamily: 'Anton, sans-serif', letterSpacing: '0.03em' }}>SOMETHING WENT WRONG</p>
+                  <p className="text-sm" style={{ color: '#3d3829' }}>{error}</p>
+                  <button onClick={handleGenerate} disabled={!canGenerate}
+                    className="mt-4 px-4 py-2 flex items-center gap-1.5 text-sm disabled:opacity-40"
+                    style={{ border: '1px solid #a83232', color: '#a83232', fontFamily: 'Anton, sans-serif', letterSpacing: '0.03em' }}>
+                    <RefreshCw size={14} /> TRY AGAIN
+                  </button>
+                </div>
+              )}
+
+              {/* Loading state — animated steps */}
               {generating && (
-                <div className="border bg-white flex items-center justify-center" style={{ borderColor: '#c2410c', minHeight: '400px', backgroundColor: '#fffbf7' }}>
-                  <div className="text-center p-8">
-                    <Loader2 size={32} className="animate-spin mx-auto mb-4" style={{ color: '#c2410c' }} />
-                    <p className="text-sm" style={{ fontFamily: 'JetBrains Mono, monospace', color: '#1a1a1a' }}>{progress}</p>
-                    <p className="text-xs mt-2" style={{ color: '#6b6452' }}>Usually takes 15-30 seconds</p>
+                <div className="border bg-white p-8" style={{ borderColor: '#d6d0c0', minHeight: '400px' }}>
+                  <div className="space-y-4">
+                    {LOADING_STEPS.map((step, i) => {
+                      const done    = i < loadingStep;
+                      const current = i === loadingStep;
+                      const future  = i > loadingStep;
+                      return (
+                        <div key={i} className="flex items-center gap-3">
+                          <div className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
+                            style={{
+                              backgroundColor: done ? '#2d5a2b' : current ? '#c2410c' : 'transparent',
+                              border: `2px solid ${done ? '#2d5a2b' : current ? '#c2410c' : '#d6d0c0'}`,
+                            }}>
+                            {done    && <Check size={12} strokeWidth={3} style={{ color: '#fff' }} />}
+                            {current && <Loader2 size={12} className="animate-spin" style={{ color: '#fff' }} />}
+                          </div>
+                          <span className="text-sm" style={{
+                            fontFamily: 'JetBrains Mono, monospace',
+                            color: done ? '#2d5a2b' : current ? '#1a1a1a' : '#c4bfb0',
+                            fontSize: current ? '0.875rem' : '0.8rem',
+                          }}>
+                            {step.label}
+                          </span>
+                        </div>
+                      );
+                    })}
                   </div>
+                  <p className="text-xs mt-8" style={{ color: '#a39d8d' }}>Usually takes 15-30 seconds</p>
                 </div>
               )}
 
               {/* Result */}
               {result && !generating && (
-                <div className="space-y-4">
+                <div className="space-y-3">
                   <div className="border bg-white" style={{ borderColor: '#1a1a1a' }}>
                     <img src={result.imageUrl} alt="Cap preview" className="w-full block" />
                   </div>
 
+                  {/* Action buttons */}
                   <div className="flex gap-2 flex-wrap">
                     <button onClick={handleGenerate} className="px-4 py-2 border flex items-center gap-1.5 text-sm"
                       style={{ borderColor: '#1a1a1a', fontFamily: 'Anton, sans-serif', letterSpacing: '0.03em' }}>
@@ -345,10 +398,25 @@ export default function CapMockupGenerator() {
                       style={{ backgroundColor: '#1a1a1a', color: '#f5f1e8', fontFamily: 'Anton, sans-serif', letterSpacing: '0.03em', textDecoration: 'none' }}>
                       <Download size={14} /> DOWNLOAD
                     </a>
+                    {result.shareId && (
+                      <button onClick={() => copyShareLink(result.shareId)}
+                        className="px-4 py-2 flex items-center gap-1.5 text-sm"
+                        style={{
+                          backgroundColor: copied ? '#2d5a2b' : '#f5f1e8',
+                          color: copied ? '#fff' : '#1a1a1a',
+                          border: `1px solid ${copied ? '#2d5a2b' : '#d6d0c0'}`,
+                          fontFamily: 'Anton, sans-serif',
+                          letterSpacing: '0.03em',
+                          transition: 'all 0.2s',
+                        }}>
+                        {copied ? <CheckCheck size={14} /> : <Copy size={14} />}
+                        {copied ? 'COPIED!' : 'COPY LINK'}
+                      </button>
+                    )}
                   </div>
 
-                  {/* Model shots */}
-                  <div className="pt-4" style={{ borderTop: '1px solid #d6d0c0' }}>
+                  {/* See it on models */}
+                  <div className="pt-3" style={{ borderTop: '1px solid #d6d0c0' }}>
                     {!modelShots && !generatingModels && (
                       <button onClick={handleModelShots}
                         className="w-full py-3 flex items-center justify-center gap-2 text-sm"
@@ -378,7 +446,9 @@ export default function CapMockupGenerator() {
                                 </div>
                               )}
                               <div className="px-2 py-1 text-center" style={{ borderTop: '1px solid #f0ece2' }}>
-                                <span className="text-[9px] tracking-[0.15em]" style={{ fontFamily: 'JetBrains Mono, monospace', color: '#6b6452' }}>{shot.label.toUpperCase()}</span>
+                                <span className="text-[9px] tracking-[0.15em]" style={{ fontFamily: 'JetBrains Mono, monospace', color: '#6b6452' }}>
+                                  {shot.label.toUpperCase()}
+                                </span>
                               </div>
                             </div>
                           ))}
@@ -394,6 +464,13 @@ export default function CapMockupGenerator() {
                               style={{ backgroundColor: '#1a1a1a', color: '#f5f1e8', fontFamily: 'JetBrains Mono, monospace', textDecoration: 'none' }}>
                               {shot.label.toUpperCase()}
                             </a>
+                          ))}
+                          {modelShots.filter(s => s.shareId).map(shot => (
+                            <button key={`share-${shot.key}`} onClick={() => copyShareLink(shot.shareId)}
+                              className="px-3 py-1.5 flex items-center gap-1 text-xs"
+                              style={{ border: '1px solid #d6d0c0', fontFamily: 'JetBrains Mono, monospace', color: '#6b6452' }}>
+                              <Copy size={11} /> {shot.label.toUpperCase()}
+                            </button>
                           ))}
                         </div>
                       </div>
