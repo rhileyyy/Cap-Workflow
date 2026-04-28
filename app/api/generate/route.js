@@ -76,7 +76,7 @@ export async function POST(request) {
         const sideUrl = await uploadToBlob(sideFile, sideLabel);
         referenceImages.push({
           image: sideUrl,
-          text: `SIDE PANEL LOGO — embroider this design as a smaller accent on the ${sideLabel} side mesh panel. Reproduce exactly.`,
+          text: `SIDE PANEL LOGO — embroider this design showing dimensions as an accent on the ${sideLabel} side mesh panel and/or embroidered over stripes. Reproduce exactly.`,
           mime_type: sideFile.type || 'image/png',
         });
       } else {
