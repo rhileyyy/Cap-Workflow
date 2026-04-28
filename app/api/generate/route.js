@@ -140,18 +140,37 @@ export async function POST(request) {
         console.warn('Could not fetch cap reference image, continuing without it.');
       }
 
-      // Assemble parts: reference cap → prompt → front logo → side logo or emphasis
-      if (capRefPart) parts.push(capRefPart);
-      parts.push({ text: prompt });
+      // ── Product shot assembly ─────────────────────────────────────────
+      // Gemini reads parts sequentially. Putting the prompt FIRST with
+      // explicit "image 1 / image 2" references, then the images in that
+      // same order, gives the model clear anchors.
+      // The base cap reference was causing two problems:
+      //   1. Its grey background was bleeding through as the output background
+      //   2. It was occupying slot 1 and pushing the logo to slot 2, making
+      //      the model treat it as secondary
+      // Solution: drop the base cap reference from the parts array.
+      // The prompt language already describes the cap construction fully.
+
+      // Slot 1: front logo
+      const hasSide = settings.hasSideLeft || settings.hasSideRight;
+      const sideFile = settings.hasSideLeft ? leftFile
+                     : settings.hasSideRight ? rightFile
+                     : null;
+      const sideImg = sideFile ? await fileToBase64Cached(sideFile) : null;
+
+      // Build a prompt prefix that names images explicitly
+      const imageRefs = hasSide
+        ? 'Image 1 is the FRONT PANEL LOGO. Image 2 is the SIDE PANEL LOGO. '
+        : 'Image 1 is the FRONT PANEL LOGO. ';
+
+      // Push: prompt → front logo → side logo (or front again for emphasis)
+      parts.push({ text: imageRefs + prompt });
       parts.push({ inlineData: { mimeType: frontImg.mimeType, data: frontImg.data } });
 
-      // Slot 3: side logo if uploaded, otherwise duplicate front for emphasis
-      const sideFile  = settings.hasSideLeft ? leftFile : settings.hasSideRight ? rightFile : null;
-      if (sideFile) {
-        const sideImg = await fileToBase64Cached(sideFile);
+      if (sideImg) {
         parts.push({ inlineData: { mimeType: sideImg.mimeType, data: sideImg.data } });
       } else {
-        // Duplicate front logo as emphasis
+        // No side logo — duplicate front logo so the model has extra emphasis
         parts.push({ inlineData: { mimeType: frontImg.mimeType, data: frontImg.data } });
       }
     }
