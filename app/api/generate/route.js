@@ -28,9 +28,7 @@ export async function POST(request) {
     const frontEmphasisFile = formData.get('design_front_emphasis');
     const leftFile  = formData.get('design_leftSide');
     const rightFile = formData.get('design_rightSide');
-    const leftFile  = formData.get('design_leftSide');
-    const rightFile = formData.get('design_rightSide');
-
+    
     if (!prompt || !frontFile) {
       return jsonError('Missing prompt or front design.', 400);
     }
