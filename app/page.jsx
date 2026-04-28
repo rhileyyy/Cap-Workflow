@@ -25,7 +25,7 @@ const STRIPE_OPTIONS = [0, 1, 2, 3];
 const PROMPT = {
   subject: 'Three-quarter front view of a high-crown structured trucker cap, photographed at a 30-degree angle from the front-right, eye-level, sitting upright on a flat surface.',
 
-  construction: 'Construction: a single continuous front face panel — one solid piece of structured fabric, NO visible vertical centre seam, smooth uninterrupted front from brim to crown. The three rear panels are clearly mesh with visible woven texture. Sharp clean vertical seam where the structured front meets the mesh sides. Pre-curved brim with downward arc and a clean smooth edge — NO visible decorative topstitching on the brim surface. Small fabric squatchee button on top centre.',
+  construction: 'Construction: a single continuous front face panel — one solid piece of structured fabric, NO visible vertical centre seam, smooth uninterrupted front from brim to crown. The three rear panels are clearly mesh with visible woven texture. Sharp clean vertical seam where the structured front meets the mesh sides. Pre-curved brim with downward arc and a clean smooth edge — NO visible stitching on the brim surface. Small fabric squatchee button on top centre.',
 
   logoLockdown: 'CRITICAL: the provided front design is the ONLY decoration on the front panel. Reproduce it EXACTLY — same shapes, colours, proportions, text characters. Do NOT invent, modify, redraw, stylise, or add to the logo. Do NOT add extra graphics, logos, text, badges, or patches anywhere. Do NOT duplicate the logo. Render as raised dimensional embroidery with visible thread texture and soft shadow on the fabric. Centre the logo on the front panel.',
 
@@ -50,12 +50,12 @@ const MODEL_TYPES = [
   {
     key: 'female',
     label: 'Women',
-    prompt: 'Portrait of a young Australian country woman in her late 20s wearing a trucker cap. She has a natural sun-kissed look and a warm genuine smile. Wearing a simple casual top. Standing outdoors in the Australian outback — red earth, golden grassland, scattered eucalyptus trees, wide open sky. The cap logo faces the camera and is clearly readable. Natural golden-hour sunlight. Shot on 85mm lens, shallow depth of field with the person and cap sharp, background softly blurred. Authentic rural Australian feel.',
+    prompt: 'Portrait of a young Australian country woman in her late 20s wearing a trucker cap. She has a natural sun-kissed look and a warm genuine smile. Wearing a simple casual top. Standing outdoors in the Australian outback — red earth, golden grassland, scattered eucalyptus trees, wide open sky. The cap logo is highly detailed 3D embroider facing the camera and is clearly readable. Natural golden-hour sunlight. Shot on 85mm lens, shallow depth of field with the person and cap sharp, background softly blurred. Authentic rural Australian feel.',
   },
   {
     key: 'child',
     label: 'Kids',
-    prompt: 'Portrait of a cheerful Australian country kid around 10 years old wearing a trucker cap. The child has a big natural grin and a sun-tanned face. Wearing a simple casual t-shirt. Standing outdoors in the Australian outback — red dust, dry golden grass, a few gum trees, bright blue sky. The cap logo faces the camera and is clearly readable. Natural warm afternoon sunlight. Shot on 85mm lens, shallow depth of field with the child and cap sharp, background softly blurred. Authentic rural Australian feel.',
+    prompt: 'Portrait of a cheerful Australian country kid around 10 years old wearing a trucker cap. The child has a big natural grin and a sun-tanned face. Wearing a simple casual t-shirt. Standing outdoors in the Australian outback — red dust, dry golden grass, a few gum trees, bright blue sky. The cap logo is highly detailed 3D embroider facing the camera and is clearly readable. Natural warm afternoon sunlight. Shot on 85mm lens, shallow depth of field with the child and cap sharp, background softly blurred. Authentic rural Australian feel.',
   },
 ];
 
