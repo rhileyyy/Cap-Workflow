@@ -212,13 +212,13 @@ export default function CapMockupGenerator() {
 
   // ── Sub-components ────────────────────────────────────────────────────
   const SectionHeader = ({ num, title, subtitle }) => (
-    <div className="flex items-baseline gap-4 mb-5 pb-3 border-b-2" style={{ borderColor: '#1a1a1a' }}>
-      <span className="text-xs tracking-widest" style={{ fontFamily: 'JetBrains Mono, monospace', color: '#c2410c' }}>
+    <div className="flex items-baseline gap-4 mb-6 pb-4 border-b" style={{ borderColor: '#1a1a1a' }}>
+      <span className="text-xs tracking-[0.2em]" style={{ fontFamily: 'JetBrains Mono, monospace', color: '#c2410c' }}>
         {String(num).padStart(2, '0')}
       </span>
       <div className="flex-1">
         <h2 className="text-3xl leading-none" style={{ fontFamily: 'Anton, sans-serif', letterSpacing: '0.02em' }}>{title}</h2>
-        {subtitle && <p className="text-sm mt-1" style={{ fontFamily: 'Newsreader, serif', fontStyle: 'italic', color: '#6b6452' }}>{subtitle}</p>}
+        {subtitle && <p className="text-sm mt-2" style={{ fontFamily: 'Newsreader, serif', fontStyle: 'italic', color: '#6b6452' }}>{subtitle}</p>}
       </div>
     </div>
   );
@@ -228,14 +228,14 @@ export default function CapMockupGenerator() {
       <div className="grain min-h-screen">
         <div className="max-w-5xl mx-auto px-6 py-10">
 
-          <header className="mb-10 pb-6 border-b-2" style={{ borderColor: '#1a1a1a' }}>
+          <header className="mb-12 pb-8 border-b" style={{ borderColor: '#1a1a1a' }}>
             <div className="flex items-end justify-between gap-6 flex-wrap">
               <div>
-                <div className="text-xs tracking-widest mb-2" style={{ fontFamily: 'JetBrains Mono, monospace', color: '#6b6452' }}>
+                <div className="text-xs tracking-[0.25em] mb-3" style={{ fontFamily: 'JetBrains Mono, monospace', color: '#6b6452' }}>
                   CUSTOM CAP STUDIO / PREVIEW TOOL
                 </div>
-                <h1 className="text-6xl leading-none" style={{ fontFamily: 'Anton, sans-serif', letterSpacing: '0.01em' }}>PREVIEW YOUR CAP</h1>
-                <p className="mt-3 text-lg max-w-xl" style={{ fontStyle: 'italic', color: '#3d3829' }}>
+                <h1 className="text-6xl md:text-7xl leading-[0.95]" style={{ fontFamily: 'Anton, sans-serif', letterSpacing: '0.01em' }}>PREVIEW YOUR CAP</h1>
+                <p className="mt-4 text-lg max-w-xl leading-relaxed" style={{ fontStyle: 'italic', color: '#3d3829' }}>
                   Upload your logos, choose your colours and stripe count, and see how your custom trucker cap would look.
                 </p>
               </div>
@@ -243,7 +243,7 @@ export default function CapMockupGenerator() {
           </header>
 
           {/* 01 — Upload logos */}
-          <section className="mb-10">
+          <section className="mb-12">
             <SectionHeader num={1} title="Upload your logos" subtitle="Front is required. Left and right side logos are optional." />
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               {SIDES.map(side => {
@@ -251,35 +251,44 @@ export default function CapMockupGenerator() {
                 return (
                   <div key={side.key}
                     onClick={() => fileInputRefs.current[side.key]?.click()}
-                    onDragOver={(e) => { e.preventDefault(); e.currentTarget.style.backgroundColor = 'rgba(194,65,12,0.04)'; }}
-                    onDragLeave={(e) => { e.preventDefault(); e.currentTarget.style.backgroundColor = 'transparent'; }}
-                    onDrop={(e) => { e.preventDefault(); e.currentTarget.style.backgroundColor = 'transparent'; handleFile(side.key, e.dataTransfer.files?.[0]); }}
-                    className="border-2 border-dashed cursor-pointer transition-colors p-4 flex items-center gap-4 min-h-32"
-                    style={{ borderColor: side.required ? '#1a1a1a' : '#a39d8d' }}
+                    onDragOver={(e) => { e.preventDefault(); e.currentTarget.style.backgroundColor = 'rgba(194,65,12,0.05)'; }}
+                    onDragLeave={(e) => { e.preventDefault(); e.currentTarget.style.backgroundColor = design ? '#ffffff' : 'transparent'; }}
+                    onDrop={(e) => { e.preventDefault(); e.currentTarget.style.backgroundColor = design ? '#ffffff' : 'transparent'; handleFile(side.key, e.dataTransfer.files?.[0]); }}
+                    className="upload-tile cursor-pointer p-4 flex items-center gap-4 min-h-[7.5rem]"
+                    style={{
+                      border: design ? `1px solid #1a1a1a` : `2px dashed ${side.required ? '#1a1a1a' : '#a39d8d'}`,
+                      backgroundColor: design ? '#ffffff' : 'transparent',
+                    }}
                   >
                     <input ref={el => fileInputRefs.current[side.key] = el} type="file" accept="image/*" className="hidden"
                       onChange={(e) => handleFile(side.key, e.target.files?.[0])} />
                     {design ? (
                       <>
-                        <div className="w-20 h-20 flex items-center justify-center bg-white border flex-shrink-0" style={{ borderColor: '#1a1a1a' }}>
+                        <div className="w-20 h-20 flex items-center justify-center bg-white flex-shrink-0" style={{ border: '1px solid #d6d0c0' }}>
                           <img src={design.preview} alt={side.label} className="max-w-full max-h-full object-contain" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="text-xs tracking-widest mb-1" style={{ fontFamily: 'JetBrains Mono, monospace', color: '#6b6452' }}>{side.label.toUpperCase()} ✓</div>
-                          <div className="text-sm truncate" style={{ fontFamily: 'Anton, sans-serif' }}>{design.file.name}</div>
-                          <button onClick={(e) => { e.stopPropagation(); clearDesign(side.key); }} className="mt-1 text-xs underline" style={{ color: '#c2410c' }}>Remove</button>
+                          <div className="text-[10px] tracking-[0.2em] mb-1 flex items-center gap-1" style={{ fontFamily: 'JetBrains Mono, monospace', color: '#2d5a2b' }}>
+                            {side.label.toUpperCase()} <Check size={11} strokeWidth={3} />
+                          </div>
+                          <div className="text-sm truncate" style={{ fontFamily: 'Anton, sans-serif', letterSpacing: '0.02em' }}>{design.file.name}</div>
+                          <button onClick={(e) => { e.stopPropagation(); clearDesign(side.key); }}
+                            className="mt-1 text-[11px] underline-offset-2 hover:underline"
+                            style={{ color: '#c2410c', fontFamily: 'JetBrains Mono, monospace' }}>
+                            REMOVE
+                          </button>
                         </div>
                       </>
                     ) : (
                       <>
                         <div className="w-20 h-20 flex items-center justify-center flex-shrink-0" style={{ backgroundColor: '#e8e1cf' }}>
-                          <Upload size={28} strokeWidth={1.5} />
+                          <Upload size={26} strokeWidth={1.5} />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="text-xs tracking-widest mb-1" style={{ fontFamily: 'JetBrains Mono, monospace', color: side.required ? '#c2410c' : '#6b6452' }}>
-                            {side.label.toUpperCase()} {side.required ? '· REQUIRED' : '· OPTIONAL'}
+                          <div className="text-[10px] tracking-[0.2em] mb-1" style={{ fontFamily: 'JetBrains Mono, monospace', color: side.required ? '#c2410c' : '#6b6452' }}>
+                            {side.label.toUpperCase()} · {side.required ? 'REQUIRED' : 'OPTIONAL'}
                           </div>
-                          <div className="text-sm" style={{ color: '#3d3829' }}>Drop a PNG or click</div>
+                          <div className="text-sm" style={{ color: '#3d3829' }}>Drop a PNG or click to browse</div>
                         </div>
                       </>
                     )}
@@ -290,32 +299,32 @@ export default function CapMockupGenerator() {
           </section>
 
           {/* 02 — Colours & stripes */}
-          <section className="mb-10">
+          <section className="mb-12">
             <SectionHeader num={2} title="Customise your cap" subtitle="Pick colours for each part of the cap and choose your stripe count." />
 
-            <div className="space-y-6">
-              {/* Colour pickers — 4 in a row */}
+            <div className="space-y-8">
+              {/* ── Cap colour cards ─────────────────────────────────────── */}
               <div>
-                <div className="flex items-center justify-between mb-3">
-                  <div className="text-xs tracking-widest" style={{ fontFamily: 'JetBrains Mono, monospace', color: '#6b6452' }}>CAP COLOURS</div>
-                  <button onClick={matchAllToFront} className="text-xs underline" style={{ color: '#c2410c', fontFamily: 'JetBrains Mono, monospace' }}>
-                    MATCH ALL TO FRONT
+                <div className="flex items-center justify-between mb-4">
+                  <div className="text-xs tracking-[0.18em]" style={{ fontFamily: 'JetBrains Mono, monospace', color: '#6b6452' }}>CAP COLOURS</div>
+                  <button onClick={matchAllToFront} className="text-xs tracking-wider underline-offset-4 hover:underline" style={{ color: '#c2410c', fontFamily: 'JetBrains Mono, monospace' }}>
+                    MATCH ALL TO FRONT →
                   </button>
                 </div>
 
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   {CAP_PARTS.map(part => (
-                    <div key={part.key} className="border-2 p-3" style={{ borderColor: '#1a1a1a' }}>
-                      <div className="text-xs tracking-widest mb-2" style={{ fontFamily: 'JetBrains Mono, monospace', color: '#6b6452' }}>
+                    <div key={part.key} className="border p-4 bg-white" style={{ borderColor: '#1a1a1a' }}>
+                      <div className="text-[10px] tracking-[0.2em] mb-3" style={{ fontFamily: 'JetBrains Mono, monospace', color: '#6b6452' }}>
                         {part.label.toUpperCase()}
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-3">
                         <input
                           type="color"
                           value={colors[part.key]}
                           onChange={(e) => setColor(part.key, e.target.value)}
-                          className="w-12 h-12 cursor-pointer border-2 flex-shrink-0"
-                          style={{ borderColor: '#1a1a1a' }}
+                          className="w-14 h-14 flex-shrink-0"
+                          aria-label={`${part.label} colour picker`}
                         />
                         <input
                           type="text"
@@ -325,9 +334,9 @@ export default function CapMockupGenerator() {
                             if (!v.startsWith('#')) v = '#' + v;
                             if (/^#[0-9a-fA-F]{0,6}$/.test(v)) setColor(part.key, v);
                           }}
-                          className="bg-transparent text-sm w-full min-w-0 outline-none"
-                          style={{ fontFamily: 'JetBrains Mono, monospace' }}
+                          className="bg-transparent text-xs w-full min-w-0 outline-none border-b border-transparent focus:border-orange-700 pb-1"
                           maxLength={7}
+                          aria-label={`${part.label} hex value`}
                         />
                       </div>
                     </div>
@@ -335,31 +344,37 @@ export default function CapMockupGenerator() {
                 </div>
               </div>
 
-              {/* Quick picks — applies to front panel, others can match */}
+              {/* ── Quick picks ───────────────────────────────────────────── */}
               <div>
-                <div className="text-xs tracking-widest mb-2" style={{ fontFamily: 'JetBrains Mono, monospace', color: '#6b6452' }}>QUICK PICKS (FRONT PANEL)</div>
+                <div className="text-xs tracking-[0.18em] mb-3" style={{ fontFamily: 'JetBrains Mono, monospace', color: '#6b6452' }}>QUICK PICKS · FRONT PANEL</div>
                 <div className="flex flex-wrap gap-2">
-                  {QUICK_COLORS.map(c => (
-                    <button key={c} onClick={() => setColor('front', c)}
-                      className="w-10 h-10 transition-transform hover:scale-110"
-                      style={{ backgroundColor: c, border: colors.front.toLowerCase() === c.toLowerCase() ? '3px solid #c2410c' : '2px solid #1a1a1a' }}
-                      title={c} />
-                  ))}
+                  {QUICK_COLORS.map(c => {
+                    const selected = colors.front.toLowerCase() === c.toLowerCase();
+                    return (
+                      <button key={c} onClick={() => setColor('front', c)}
+                        className="w-9 h-9"
+                        style={{
+                          backgroundColor: c,
+                          border: selected ? '2px solid #c2410c' : '1px solid #1a1a1a',
+                          boxShadow: selected ? '0 0 0 2px #f5f1e8 inset' : 'none',
+                        }}
+                        title={c}
+                        aria-label={`Use front panel colour ${c}`} />
+                    );
+                  })}
                 </div>
               </div>
 
-              <div className="border-t" style={{ borderColor: '#d6d0c0' }} />
+              <hr className="divider" />
 
-              {/* Stripes */}
+              {/* ── Stripes ───────────────────────────────────────────────── */}
               <div>
-                <div className="text-xs tracking-widest mb-3" style={{ fontFamily: 'JetBrains Mono, monospace', color: '#6b6452' }}>
-                  SEWN SIDE STRIPES
-                </div>
-                <div className="flex flex-wrap gap-3 items-end">
-                  <div className="relative inline-block w-full md:w-64">
+                <div className="text-xs tracking-[0.18em] mb-3" style={{ fontFamily: 'JetBrains Mono, monospace', color: '#6b6452' }}>SEWN SIDE STRIPES</div>
+                <div className="flex flex-wrap gap-3 items-stretch">
+                  <div className="relative inline-block w-full md:w-60">
                     <select value={stripeCount} onChange={(e) => setStripeCount(Number(e.target.value))}
-                      className="w-full px-4 py-3 pr-10 border-2 bg-transparent appearance-none cursor-pointer text-base"
-                      style={{ borderColor: '#1a1a1a', fontFamily: 'Anton, sans-serif', letterSpacing: '0.05em', backgroundColor: '#f5f1e8' }}>
+                      className="w-full h-full px-4 py-3 pr-10 border bg-white text-base cursor-pointer"
+                      style={{ borderColor: '#1a1a1a', fontFamily: 'Anton, sans-serif', letterSpacing: '0.05em' }}>
                       {STRIPE_OPTIONS.map(n => (
                         <option key={n} value={n}>
                           {n === 0 ? 'NO STRIPES' : `${n} STRIPE${n > 1 ? 'S' : ''}`}
@@ -367,52 +382,52 @@ export default function CapMockupGenerator() {
                       ))}
                     </select>
                     <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
-                      <svg width="14" height="8" viewBox="0 0 14 8" fill="none">
+                      <svg width="12" height="7" viewBox="0 0 14 8" fill="none">
                         <path d="M1 1L7 7L13 1" stroke="#1a1a1a" strokeWidth="2" strokeLinecap="round" />
                       </svg>
                     </div>
                   </div>
                   {stripeCount > 0 && (
-                    <div className="border-2 p-3 flex items-center gap-2" style={{ borderColor: '#1a1a1a' }}>
-                      <div className="text-xs tracking-widest" style={{ fontFamily: 'JetBrains Mono, monospace', color: '#6b6452' }}>STRIPE COLOUR</div>
+                    <div className="border bg-white px-3 py-2 flex items-center gap-3" style={{ borderColor: '#1a1a1a' }}>
+                      <div className="text-[10px] tracking-[0.2em]" style={{ fontFamily: 'JetBrains Mono, monospace', color: '#6b6452' }}>STRIPE COLOUR</div>
                       <input type="color" value={stripeColor} onChange={(e) => setStripeColor(e.target.value)}
-                        className="w-10 h-10 cursor-pointer border flex-shrink-0" style={{ borderColor: '#1a1a1a' }} />
+                        className="w-10 h-10 flex-shrink-0" aria-label="Stripe colour picker" />
                       <input type="text" value={stripeColor}
                         onChange={(e) => { let v = e.target.value.trim(); if (!v.startsWith('#')) v = '#' + v; if (/^#[0-9a-fA-F]{0,6}$/.test(v)) setStripeColor(v); }}
-                        className="bg-transparent text-sm w-20 outline-none" style={{ fontFamily: 'JetBrains Mono, monospace' }} maxLength={7} />
+                        className="bg-transparent text-xs w-20 outline-none border-b border-transparent focus:border-orange-700 pb-1"
+                        maxLength={7} aria-label="Stripe hex value" />
                     </div>
                   )}
                 </div>
               </div>
 
-              <div className="border-t" style={{ borderColor: '#d6d0c0' }} />
+              <hr className="divider" />
 
-              {/* Sandwich brim */}
+              {/* ── Sandwich brim ─────────────────────────────────────────── */}
               <div>
-                <div className="text-xs tracking-widest mb-3" style={{ fontFamily: 'JetBrains Mono, monospace', color: '#6b6452' }}>
-                  SANDWICH BRIM
-                </div>
-                <div className="flex flex-wrap gap-3 items-center">
-                  <label className="flex items-center gap-3 border-2 p-3 cursor-pointer" style={{ borderColor: sandwichBrim ? '#c2410c' : '#1a1a1a', backgroundColor: sandwichBrim ? '#fff5ee' : 'transparent' }}>
-                    <input type="checkbox" checked={sandwichBrim} onChange={(e) => setSandwichBrim(e.target.checked)}
-                      className="w-5 h-5 cursor-pointer accent-orange-700" />
+                <div className="text-xs tracking-[0.18em] mb-3" style={{ fontFamily: 'JetBrains Mono, monospace', color: '#6b6452' }}>SANDWICH BRIM</div>
+                <div className="flex flex-wrap gap-3 items-stretch">
+                  <label className="flex items-center gap-3 border bg-white px-4 py-3 cursor-pointer select-none"
+                    style={{ borderColor: sandwichBrim ? '#c2410c' : '#1a1a1a', backgroundColor: sandwichBrim ? '#fff5ee' : '#ffffff' }}>
+                    <input type="checkbox" checked={sandwichBrim} onChange={(e) => setSandwichBrim(e.target.checked)} />
                     <span className="text-sm" style={{ fontFamily: 'Anton, sans-serif', letterSpacing: '0.05em' }}>
-                      {sandwichBrim ? 'SANDWICH BRIM ON' : 'NO SANDWICH BRIM'}
+                      {sandwichBrim ? 'SANDWICH BRIM ON' : 'ENABLE SANDWICH BRIM'}
                     </span>
                   </label>
                   {sandwichBrim && (
-                    <div className="border-2 p-3 flex items-center gap-2" style={{ borderColor: '#1a1a1a' }}>
-                      <div className="text-xs tracking-widest" style={{ fontFamily: 'JetBrains Mono, monospace', color: '#6b6452' }}>UNDERSIDE COLOUR</div>
+                    <div className="border bg-white px-3 py-2 flex items-center gap-3" style={{ borderColor: '#1a1a1a' }}>
+                      <div className="text-[10px] tracking-[0.2em]" style={{ fontFamily: 'JetBrains Mono, monospace', color: '#6b6452' }}>UNDERSIDE COLOUR</div>
                       <input type="color" value={sandwichColor} onChange={(e) => setSandwichColor(e.target.value)}
-                        className="w-10 h-10 cursor-pointer border flex-shrink-0" style={{ borderColor: '#1a1a1a' }} />
+                        className="w-10 h-10 flex-shrink-0" aria-label="Sandwich underside colour picker" />
                       <input type="text" value={sandwichColor}
                         onChange={(e) => { let v = e.target.value.trim(); if (!v.startsWith('#')) v = '#' + v; if (/^#[0-9a-fA-F]{0,6}$/.test(v)) setSandwichColor(v); }}
-                        className="bg-transparent text-sm w-20 outline-none" style={{ fontFamily: 'JetBrains Mono, monospace' }} maxLength={7} />
+                        className="bg-transparent text-xs w-20 outline-none border-b border-transparent focus:border-orange-700 pb-1"
+                        maxLength={7} aria-label="Sandwich hex value" />
                     </div>
                   )}
                 </div>
                 {sandwichBrim && (
-                  <p className="text-xs mt-2" style={{ color: '#6b6452', fontStyle: 'italic' }}>
+                  <p className="text-xs mt-3" style={{ color: '#6b6452', fontStyle: 'italic' }}>
                     A contrasting colour strip visible along the underside edge of the brim.
                   </p>
                 )}
@@ -421,21 +436,21 @@ export default function CapMockupGenerator() {
           </section>
 
           {/* 03 — Preview */}
-          <section className="mb-10">
-            <div className="flex items-center justify-between mb-5 pb-3 border-b-2 flex-wrap gap-3" style={{ borderColor: '#1a1a1a' }}>
+          <section className="mb-12">
+            <div className="flex items-center justify-between mb-6 pb-4 border-b flex-wrap gap-3" style={{ borderColor: '#1a1a1a' }}>
               <div className="flex items-baseline gap-4">
-                <span className="text-xs tracking-widest" style={{ fontFamily: 'JetBrains Mono, monospace', color: '#c2410c' }}>03</span>
+                <span className="text-xs tracking-[0.2em]" style={{ fontFamily: 'JetBrains Mono, monospace', color: '#c2410c' }}>03</span>
                 <h2 className="text-3xl leading-none" style={{ fontFamily: 'Anton, sans-serif', letterSpacing: '0.02em' }}>PREVIEW</h2>
               </div>
               <button onClick={handleGenerate} disabled={!canGenerate}
-                className="px-6 py-3 transition-all flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+                className="px-6 py-3 flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
                 style={{ backgroundColor: '#1a1a1a', color: '#f5f1e8', fontFamily: 'Anton, sans-serif', letterSpacing: '0.05em' }}>
                 {generating ? (<><Loader2 size={18} className="animate-spin" /> WORKING…</>) : (<><Sparkles size={18} /> CREATE PREVIEW</>)}
               </button>
             </div>
 
             {generating && (
-              <div className="p-6 border-2" style={{ borderColor: '#c2410c', backgroundColor: '#fff5ee' }}>
+              <div className="p-6 border" style={{ borderColor: '#c2410c', backgroundColor: '#fff5ee' }}>
                 <div className="flex items-center gap-3">
                   <Loader2 size={18} className="animate-spin" style={{ color: '#c2410c' }} />
                   <span className="text-sm" style={{ fontFamily: 'JetBrains Mono, monospace' }}>{progress}</span>
@@ -448,11 +463,11 @@ export default function CapMockupGenerator() {
 
             {result && !generating && (
               <div>
-                <div className="border-2" style={{ borderColor: '#1a1a1a' }}>
+                <div className="border bg-white" style={{ borderColor: '#1a1a1a' }}>
                   <img src={result.imageUrl} alt="Cap preview" className="w-full block" />
                 </div>
                 <div className="mt-6 flex gap-3 items-center flex-wrap">
-                  <button onClick={handleGenerate} className="px-5 py-2 border-2 flex items-center gap-2"
+                  <button onClick={handleGenerate} className="px-5 py-2 border flex items-center gap-2"
                     style={{ borderColor: '#1a1a1a', fontFamily: 'Anton, sans-serif', letterSpacing: '0.05em' }}>
                     <RefreshCw size={16} /> TRY AGAIN
                   </button>
@@ -467,8 +482,8 @@ export default function CapMockupGenerator() {
                 </div>
 
                 {/* See it on models */}
-                <div className="mt-8 pt-6 border-t-2" style={{ borderColor: '#1a1a1a' }}>
-                  <div className="flex items-center justify-between flex-wrap gap-3 mb-5">
+                <div className="mt-10 pt-8 border-t" style={{ borderColor: '#1a1a1a' }}>
+                  <div className="flex items-center justify-between flex-wrap gap-3 mb-6">
                     <div>
                       <h3 className="text-2xl" style={{ fontFamily: 'Anton, sans-serif', letterSpacing: '0.02em' }}>SEE IT IN ACTION</h3>
                       <p className="text-sm mt-1" style={{ fontStyle: 'italic', color: '#6b6452' }}>
@@ -485,7 +500,7 @@ export default function CapMockupGenerator() {
                   </div>
 
                   {generatingModels && (
-                    <div className="p-6 border-2" style={{ borderColor: '#c2410c', backgroundColor: '#fff5ee' }}>
+                    <div className="p-6 border" style={{ borderColor: '#c2410c', backgroundColor: '#fff5ee' }}>
                       <div className="flex items-center gap-3">
                         <Loader2 size={18} className="animate-spin" style={{ color: '#c2410c' }} />
                         <span className="text-sm" style={{ fontFamily: 'JetBrains Mono, monospace' }}>{modelProgress}</span>
@@ -500,7 +515,7 @@ export default function CapMockupGenerator() {
                     <div>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         {modelShots.map((shot) => (
-                          <div key={shot.key} className="border-2" style={{ borderColor: '#1a1a1a' }}>
+                          <div key={shot.key} className="border bg-white" style={{ borderColor: '#1a1a1a' }}>
                             {shot.imageUrl ? (
                               <img src={shot.imageUrl} alt={`${shot.label} preview`} className="w-full block" />
                             ) : (
@@ -508,14 +523,14 @@ export default function CapMockupGenerator() {
                                 <p className="text-sm text-center" style={{ color: '#a83232' }}>{shot.error || 'Failed to create this preview'}</p>
                               </div>
                             )}
-                            <div className="px-3 py-2" style={{ backgroundColor: '#f5f1e8' }}>
-                              <span className="text-sm" style={{ fontFamily: 'Anton, sans-serif', letterSpacing: '0.05em' }}>{shot.label.toUpperCase()}</span>
+                            <div className="px-3 py-2 border-t" style={{ borderColor: '#d6d0c0' }}>
+                              <span className="text-xs tracking-[0.15em]" style={{ fontFamily: 'Anton, sans-serif', letterSpacing: '0.1em' }}>{shot.label.toUpperCase()}</span>
                             </div>
                           </div>
                         ))}
                       </div>
-                      <div className="mt-4 flex gap-3 items-center flex-wrap">
-                        <button onClick={handleModelShots} className="px-5 py-2 border-2 flex items-center gap-2"
+                      <div className="mt-5 flex gap-3 items-center flex-wrap">
+                        <button onClick={handleModelShots} className="px-5 py-2 border flex items-center gap-2"
                           style={{ borderColor: '#1a1a1a', fontFamily: 'Anton, sans-serif', letterSpacing: '0.05em' }}>
                           <RefreshCw size={16} /> TRY AGAIN
                         </button>
