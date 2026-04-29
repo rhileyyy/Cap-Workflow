@@ -80,7 +80,7 @@ function buildFrontProductPrompt(s) {
     : `Change the stripe colour to ${describeColor(s.stripeColor)}. Keep the stripes exactly AS IS in Image 1 — do NOT move them.`;
 
   const rightLogoLine = s.hasRight
-    ? `Image 3 is the RIGHT SIDE DESIGN. Reproduce it EXACTLY on the right side mesh panel — every shape, letter, colour, and detail must match precisely, including any white or light-coloured elements. The embroidery is SEWN OVER THE TOP OF any stripes — the logo sits in the foreground, stripes in the background, partially covered by the embroidery. Raised 3D embroidery with visible stitches. The side design must be embroidered SMALL — approximately 1/4 to 1/5 the size of the front panel logo. Do NOT scale it to fill the mesh panel.`
+    ? `Image 3 is the RIGHT SIDE DESIGN. Reproduce it EXACTLY on the visible side mesh panel in foreground — every shape, letter, colour, and detail must match precisely, including any white or light-coloured elements. The embroidery is SEWN OVER THE TOP OF any stripes — the logo sits in the foreground, stripes in the background, partially covered by the embroidery. Raised 3D embroidery with visible stitches. The side design must be embroidered SMALL — approximately 1/4 to 1/5 the size of the front panel logo. Do NOT scale it to fill the mesh panel.`
     : '';
 
   return [P.subject, P.construction, colourLine, stripeLine, P.embroidery, P.logoLockdown, rightLogoLine, P.avoid].filter(Boolean).join(' ');
@@ -106,11 +106,11 @@ function buildRearProductPrompt(s) {
     imgIndex++;
   }
   if (s.hasLeft) {
-    logoLines.push(`Image ${imgIndex} is the LEFT SIDE DESIGN. Reproduce it EXACTLY on the left side mesh panel — every shape, letter, colour, and detail must match precisely. The 3D embroidery is SEWN OVER THE TOP OF any stripes — the logo sits in the foreground, stripes in the background, partially covered by the embroidery. Raised 3D embroidery with visible stitches. The side design must be embroidered SMALL — approximately 1/3 to 1/3 the size of a front panel logo. Do NOT scale it to fill the mesh panel.`);
+    logoLines.push(`Image ${imgIndex} is the LEFT SIDE DESIGN. Reproduce it EXACTLY on the visible side mesh panel in foreground — every shape, letter, colour, and detail must match precisely. The 3D embroidery is SEWN OVER THE TOP OF any stripes — the logo sits in the foreground, stripes in the background, partially covered by the embroidery. Raised 3D embroidery with visible stitches. The side design must be embroidered SMALL — approximately 1/3 to 1/3 the size of a front panel logo. Do NOT scale it to fill the mesh panel.`);
     imgIndex++;
   }
 
-  logoLines.push('IMPORTANT: Only place embroidery on the parts of the cap that are visible in Image 1. Do NOT add any logos or embroidery on the right side — the right side is not visible from this rear 3/4 left angle. Do NOT invent a different camera angle. The output must match Image 1\'s exact viewing angle.');
+  logoLines.push('IMPORTANT: Only place embroidery on the parts of the cap that are visible in Image 1. Do NOT invent a different camera angle. The output must match Image 1\'s exact viewing angle.');
 
   return [P.subject, P.construction, colourLine, stripeLine, P.embroidery, ...logoLines, P.avoid].filter(Boolean).join(' ');
 }
