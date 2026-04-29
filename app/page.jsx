@@ -6,9 +6,8 @@ import { Upload, Check, Loader2, RefreshCw, Sparkles, Users } from 'lucide-react
 const API_ENDPOINT = '/api/generate';
 
 const SIDES = [
-  { key: 'front',     label: 'Front Panel', required: true  },
-  { key: 'leftSide',  label: 'Left Side',   required: false },
-  { key: 'rightSide', label: 'Right Side',  required: false },
+  { key: 'front', label: 'Front Panel', required: true  },
+  { key: 'side',  label: 'Side Panel',  required: false },
 ];
 
 const QUICK_COLORS = [
@@ -20,10 +19,9 @@ const QUICK_COLORS = [
 const STRIPE_OPTIONS = [0, 1, 2, 3];
 
 const CAP_PARTS = [
-  { key: 'front',    label: 'Front' },
-  { key: 'mesh',     label: 'Mesh'  },
-  { key: 'brim',     label: 'Brim'  },
-  { key: 'snapback', label: 'Snap'  },
+  { key: 'front', label: 'Front' },
+  { key: 'mesh',  label: 'Mesh'  },
+  { key: 'brim',  label: 'Brim'  },
 ];
 
 // Loading steps — shown while the backend generates. Durations are estimates
@@ -36,10 +34,10 @@ const LOADING_STEPS = [
 ];
 
 export default function CapMockupGenerator() {
-  const [designs, setDesigns]         = useState({ front: null, leftSide: null, rightSide: null });
+  const [designs, setDesigns]         = useState({ front: null, side: null });
   const [autoMode, setAutoMode]       = useState(true);
-  const [variationSeed, setVariationSeed] = useState(0); // default ON
-  const [colors, setColors]           = useState({ front: '#1a1a1a', mesh: '#1a1a1a', brim: '#1a1a1a', snapback: '#1a1a1a' });
+  const [variationSeed, setVariationSeed] = useState(0);
+  const [colors, setColors]           = useState({ front: '#1a1a1a', mesh: '#1a1a1a', brim: '#1a1a1a' });
   const [stripeCount, setStripeCount] = useState(0);
   const [stripeColor, setStripeColor] = useState('#ffffff');
   const [sandwichBrim, setSandwichBrim]   = useState(false);
@@ -64,7 +62,7 @@ export default function CapMockupGenerator() {
   const clearDesign   = (sideKey) => setDesigns(prev => ({ ...prev, [sideKey]: null }));
   const canGenerate   = !!designs.front && !generating;
   const setColor      = (part, value) => setColors(prev => ({ ...prev, [part]: value }));
-  const matchAll      = () => setColors({ front: colors.front, mesh: colors.front, brim: colors.front, snapback: colors.front });
+  const matchAll = () => setColors({ front: colors.front, mesh: colors.front, brim: colors.front });
 
   // ── Animated loading steps ─────────────────────────────────────────────
   const startLoadingAnimation = () => {
@@ -92,20 +90,17 @@ export default function CapMockupGenerator() {
     fd.append('mode',      overrides.mode     || (autoMode ? 'auto' : 'product'));
     fd.append('modelKey',  overrides.modelKey || 'male');
     fd.append('variationSeed', String(overrides.variationSeed ?? variationSeed));
-    // Only send colour/stripe data in manual mode — in auto mode the AI picks these
     if (!autoMode || overrides.mode === 'model') {
-      fd.append('color_front',    colors.front);
-      fd.append('color_mesh',     colors.mesh);
-      fd.append('color_brim',     colors.brim);
-      fd.append('color_snapback', colors.snapback);
-      fd.append('stripeCount',    String(stripeCount));
-      fd.append('stripeColor',    stripeColor);
-      fd.append('sandwichBrim',   String(sandwichBrim));
-      fd.append('sandwichColor',  sandwichColor);
+      fd.append('color_front', colors.front);
+      fd.append('color_mesh',  colors.mesh);
+      fd.append('color_brim',  colors.brim);
+      fd.append('stripeCount', String(stripeCount));
+      fd.append('stripeColor', stripeColor);
+      fd.append('sandwichBrim',  String(sandwichBrim));
+      fd.append('sandwichColor', sandwichColor);
     }
     fd.append('design_front', designs.front.file);
-    if (designs.leftSide)  fd.append('design_leftSide',  designs.leftSide.file);
-    if (designs.rightSide) fd.append('design_rightSide', designs.rightSide.file);
+    if (designs.side) fd.append('design_side', designs.side.file);
     return fd;
   };
 
