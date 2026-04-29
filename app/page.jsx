@@ -5,9 +5,11 @@ import { Upload, Check, Loader2, RefreshCw, Sparkles, ChevronDown, ChevronUp } f
 
 const API_ENDPOINT = '/api/generate';
 
-const SIDES = [
-  { key: 'front', label: 'Front Panel', required: true  },
-  { key: 'side',  label: 'Side Panel',  required: false },
+const LOGO_SLOTS = [
+  { key: 'front', label: 'Front Panel',  required: true,  hint: 'Required · click or drag to upload' },
+  { key: 'left',  label: 'Left Side',    required: false, hint: 'Optional · small accent embroidery' },
+  { key: 'right', label: 'Right Side',   required: false, hint: 'Optional · small accent embroidery' },
+  { key: 'rear',  label: 'Rear Panel',   required: false, hint: 'Optional · small accent embroidery' },
 ];
 
 const CAP_COLORS = [
@@ -51,14 +53,16 @@ const CapOutline = () => (
   </svg>
 );
 
-const PersonSilhouette = () => (
-  <svg viewBox="0 0 60 80" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-9 h-12">
-    <circle cx="30" cy="16" r="9" stroke="#c4bfb0" strokeWidth="1.5" />
-    <path d="M10 76 C10 53 18 41 30 41 C42 41 50 53 50 76"
+const RearCapOutline = () => (
+  <svg viewBox="0 0 280 180" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-40 h-24">
+    <path d="M220 118 C224 90 212 55 160 40 C108 55 54 68 50 108"
+      stroke="#c4bfb0" strokeWidth="2" strokeLinecap="round" />
+    <path d="M50 108 L50 120 L220 132 L220 118 Z"
+      stroke="#c4bfb0" strokeWidth="2" strokeLinejoin="round" />
+    <path d="M220 132 C234 136 252 143 254 152 C256 161 236 163 216 161"
       stroke="#c4bfb0" strokeWidth="1.5" strokeLinecap="round" />
-    <path d="M13 57 L6 73 M47 57 L54 73"
-      stroke="#c4bfb0" strokeWidth="1.5" strokeLinecap="round" />
-    <rect x="21" y="6" width="18" height="4" rx="2" stroke="#c4bfb0" strokeWidth="1" />
+    <circle cx="135" cy="41" r="5" stroke="#c4bfb0" strokeWidth="1.5" />
+    <rect x="115" y="145" width="50" height="8" rx="2" stroke="#c4bfb0" strokeWidth="1" strokeDasharray="3 3" />
   </svg>
 );
 
@@ -133,7 +137,7 @@ function isLightColor(hex) {
 }
 
 export default function CapPreview() {
-  const [designs, setDesigns]             = useState({ front: null, side: null });
+  const [designs, setDesigns]             = useState({ front: null, left: null, right: null, rear: null });
   const [autoMode, setAutoMode]           = useState(true);
   const [variationSeed, setVariationSeed] = useState(0);
   const [colors, setColors]               = useState({ front: '#111111', mesh: '#111111', brim: '#111111' });
@@ -144,22 +148,26 @@ export default function CapPreview() {
   const [showAdvanced, setShowAdvanced]   = useState(false);
   const [generating, setGenerating]       = useState(false);
   const [loadingStep, setLoadingStep]     = useState(0);
-  const [result, setResult]               = useState(null);
+  const [result, setResult]               = useState(null);       // front 3/4 view
+  const [rearResult, setRearResult]       = useState(null);       // rear 3/4 view
+  const [rearLoading, setRearLoading]     = useState(false);
   const [error, setError]                 = useState(null);
-  const [modelShots, setModelShots]       = useState({ male: null, female: null, child: null });
   const fileInputRefs = useRef({});
   const stepTimers    = useRef([]);
 
-  const handleFile = (sideKey, file) => {
+  // Does the customer need a rear render?
+  const needsRear = !!(designs.right || designs.rear);
+
+  const handleFile = (slotKey, file) => {
     if (!file || !file.type.startsWith('image/')) return;
     const reader = new FileReader();
     reader.onload = (e) => {
       const img = new Image();
       img.onload = () => {
-        const minPx = sideKey === 'front' ? 400 : 200;
+        const minPx = slotKey === 'front' ? 400 : 200;
         setDesigns(prev => ({
           ...prev,
-          [sideKey]: {
+          [slotKey]: {
             file,
             preview: e.target.result,
             lowRes: img.width < minPx || img.height < minPx,
@@ -198,12 +206,13 @@ export default function CapPreview() {
   };
   useEffect(() => () => stopLoadingAnimation(), []);
 
-  const buildFormData = (overrides = {}) => {
+  // Build form data for a specific view angle
+  const buildFormData = (viewAngle = 'front', overrides = {}) => {
     const fd = new FormData();
-    fd.append('mode',          overrides.mode     || (autoMode ? 'auto' : 'product'));
-    fd.append('modelKey',      overrides.modelKey || 'male');
+    fd.append('mode',          overrides.mode || (autoMode ? 'auto' : 'product'));
+    fd.append('viewAngle',     viewAngle);
     fd.append('variationSeed', String(overrides.variationSeed ?? variationSeed));
-    if (!autoMode || overrides.mode === 'model') {
+    if (!autoMode) {
       fd.append('color_front',   colors.front);
       fd.append('color_mesh',    colors.mesh);
       fd.append('color_brim',    colors.brim);
@@ -212,8 +221,15 @@ export default function CapPreview() {
       fd.append('sandwichBrim',  String(sandwichBrim));
       fd.append('sandwichColor', sandwichColor);
     }
+    // Always send the front logo
     fd.append('design_front', designs.front.file);
-    if (designs.side) fd.append('design_side', designs.side.file);
+    // Attach only the logos relevant to this angle
+    if (viewAngle === 'front') {
+      if (designs.left) fd.append('design_left', designs.left.file);
+    } else if (viewAngle === 'rear') {
+      if (designs.right) fd.append('design_right', designs.right.file);
+      if (designs.rear)  fd.append('design_rear',  designs.rear.file);
+    }
     return fd;
   };
 
@@ -221,20 +237,41 @@ export default function CapPreview() {
     if (!designs.front) return;
     setGenerating(true);
     setResult(null);
-    setModelShots({ male: null, female: null, child: null });
+    setRearResult(null);
+    setRearLoading(false);
     setError(null);
     startLoadingAnimation();
     const nextSeed = autoMode ? variationSeed + 1 : variationSeed;
     if (autoMode) setVariationSeed(nextSeed);
+
     try {
-      const res  = await fetch(API_ENDPOINT, { method: 'POST', body: buildFormData({ variationSeed: nextSeed }) });
-      const text = await res.text();
-      let data = {};
-      try { data = JSON.parse(text); } catch {
-        throw new Error(res.status === 404 ? 'API route not found.' : 'Server error — please try again.');
+      // Always generate front 3/4 view
+      const frontRes  = await fetch(API_ENDPOINT, { method: 'POST', body: buildFormData('front', { variationSeed: nextSeed }) });
+      const frontText = await frontRes.text();
+      let frontData = {};
+      try { frontData = JSON.parse(frontText); } catch {
+        throw new Error(frontRes.status === 404 ? 'API route not found.' : 'Server error — please try again.');
       }
-      if (!res.ok) throw new Error(data.error || 'Something went wrong.');
-      setResult(data);
+      if (!frontRes.ok) throw new Error(frontData.error || 'Something went wrong.');
+      setResult(frontData);
+
+      // If rear view needed, generate it after front succeeds
+      if (needsRear) {
+        setRearLoading(true);
+        try {
+          const rearRes  = await fetch(API_ENDPOINT, { method: 'POST', body: buildFormData('rear', { variationSeed: nextSeed }) });
+          const rearData = await rearRes.json().catch(() => ({}));
+          if (rearRes.ok) {
+            setRearResult(rearData);
+          } else {
+            setRearResult({ error: rearData.error || 'Rear view failed' });
+          }
+        } catch (err) {
+          setRearResult({ error: err.message });
+        } finally {
+          setRearLoading(false);
+        }
+      }
     } catch (err) {
       setError(err.message);
     } finally {
@@ -243,22 +280,23 @@ export default function CapPreview() {
     }
   };
 
-  const MODEL_LABELS = { male: 'Men', female: 'Women', child: 'Kids' };
-
-  const handleModelShot = async (key) => {
-    if (!designs.front || !result?.imageUrl) return;
-    setModelShots(prev => ({ ...prev, [key]: 'loading' }));
+  // Retry just the rear view
+  const handleRetryRear = async () => {
+    if (!designs.front || !result) return;
+    setRearResult(null);
+    setRearLoading(true);
     try {
-      const fd = buildFormData({ mode: 'model', modelKey: key });
-      fd.append('cap_image_url', result.imageUrl);
-      const res  = await fetch(API_ENDPOINT, { method: 'POST', body: fd });
-      const data = await res.json().catch(() => ({}));
-      setModelShots(prev => ({
-        ...prev,
-        [key]: res.ok ? { imageUrl: data.imageUrl, shareId: data.shareId } : { error: data.error || 'Failed' }
-      }));
+      const rearRes  = await fetch(API_ENDPOINT, { method: 'POST', body: buildFormData('rear') });
+      const rearData = await rearRes.json().catch(() => ({}));
+      if (rearRes.ok) {
+        setRearResult(rearData);
+      } else {
+        setRearResult({ error: rearData.error || 'Rear view failed' });
+      }
     } catch (err) {
-      setModelShots(prev => ({ ...prev, [key]: { error: err.message } }));
+      setRearResult({ error: err.message });
+    } finally {
+      setRearLoading(false);
     }
   };
 
@@ -299,23 +337,23 @@ export default function CapPreview() {
             <section>
               <div className="section-label">YOUR LOGOS</div>
               <div className="space-y-2">
-                {SIDES.map(side => {
-                  const design = designs[side.key];
+                {LOGO_SLOTS.map(slot => {
+                  const design = designs[slot.key];
                   return (
-                    <div key={side.key}
+                    <div key={slot.key}
                       className="upload-tile flex items-center gap-3 cursor-pointer rounded-md"
-                      onClick={() => fileInputRefs.current[side.key]?.click()}
+                      onClick={() => fileInputRefs.current[slot.key]?.click()}
                       onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add('drag-over'); }}
                       onDragLeave={(e) => e.currentTarget.classList.remove('drag-over')}
-                      onDrop={(e) => { e.preventDefault(); e.currentTarget.classList.remove('drag-over'); handleFile(side.key, e.dataTransfer.files?.[0]); }}
+                      onDrop={(e) => { e.preventDefault(); e.currentTarget.classList.remove('drag-over'); handleFile(slot.key, e.dataTransfer.files?.[0]); }}
                       style={{
                         padding: '10px 12px',
-                        border: `1.5px ${design ? 'solid' : 'dashed'} ${design ? (design.lowRes ? '#d4900a' : '#d0cbbf') : side.required ? '#1a1a1a' : '#c4bfb0'}`,
+                        border: `1.5px ${design ? 'solid' : 'dashed'} ${design ? (design.lowRes ? '#d4900a' : '#d0cbbf') : slot.required ? '#1a1a1a' : '#c4bfb0'}`,
                         backgroundColor: design ? '#fff' : 'transparent',
                       }}>
-                      <input ref={el => fileInputRefs.current[side.key] = el}
+                      <input ref={el => fileInputRefs.current[slot.key] = el}
                         type="file" accept="image/*" className="hidden"
-                        onChange={(e) => handleFile(side.key, e.target.files?.[0])} />
+                        onChange={(e) => handleFile(slot.key, e.target.files?.[0])} />
 
                       {design ? (
                         <>
@@ -327,7 +365,7 @@ export default function CapPreview() {
                             <div className="flex items-center gap-2 mb-1">
                               <span className="text-[10px] tracking-[0.15em] font-semibold"
                                 style={{ fontFamily: 'JetBrains Mono, monospace', color: design.lowRes ? '#c97a2a' : '#2d5a2b' }}>
-                                {side.label.toUpperCase()}
+                                {slot.label.toUpperCase()}
                               </span>
                               {design.lowRes
                                 ? <span className="text-[9px] px-1.5 py-0.5 rounded"
@@ -344,7 +382,7 @@ export default function CapPreview() {
                               </div>
                             )}
                           </div>
-                          <button onClick={(e) => { e.stopPropagation(); clearDesign(side.key); }}
+                          <button onClick={(e) => { e.stopPropagation(); clearDesign(slot.key); }}
                             className="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-full transition-colors hover:bg-red-50"
                             style={{ color: '#c2410c', fontSize: 14, border: 'none', background: 'transparent', cursor: 'pointer' }}>✕
                           </button>
@@ -357,11 +395,11 @@ export default function CapPreview() {
                           </div>
                           <div>
                             <div className="text-[10px] tracking-[0.15em] font-semibold mb-1"
-                              style={{ fontFamily: 'JetBrains Mono, monospace', color: side.required ? '#1a1a1a' : '#6b6452' }}>
-                              {side.label.toUpperCase()}
+                              style={{ fontFamily: 'JetBrains Mono, monospace', color: slot.required ? '#1a1a1a' : '#6b6452' }}>
+                              {slot.label.toUpperCase()}
                             </div>
                             <div className="text-[11px]" style={{ color: '#a39d8d' }}>
-                              {side.required ? 'Required · click or drag to upload' : 'Optional · click or drag to upload'}
+                              {slot.hint}
                             </div>
                           </div>
                         </>
@@ -603,7 +641,7 @@ export default function CapPreview() {
                 })}
               </div>
               <p className="text-center text-[10px] tracking-widest" style={{ color: '#a39d8d', fontFamily: 'JetBrains Mono, monospace' }}>
-                USUALLY 15–25 SECONDS
+                {needsRear ? 'GENERATING 2 VIEWS — USUALLY 30–50 SECONDS' : 'USUALLY 15–25 SECONDS'}
               </p>
             </div>
           )}
@@ -612,14 +650,74 @@ export default function CapPreview() {
           {result && !generating && (
             <div className="w-full" style={{ maxWidth: 700 }}>
 
-              {/* Cap image */}
-              <div className="rounded-xl overflow-hidden mb-4"
-                style={{ boxShadow: '0 8px 40px rgba(0,0,0,0.13), 0 2px 8px rgba(0,0,0,0.08)', border: '1px solid rgba(0,0,0,0.05)' }}>
-                <img src={result.imageUrl} alt="Your custom cap" className="w-full block" />
+              {/* Front 3/4 view */}
+              <div>
+                <div className="section-label mb-2">FRONT VIEW</div>
+                <div className="rounded-xl overflow-hidden mb-4"
+                  style={{ boxShadow: '0 8px 40px rgba(0,0,0,0.13), 0 2px 8px rgba(0,0,0,0.08)', border: '1px solid rgba(0,0,0,0.05)' }}>
+                  <img src={result.imageUrl} alt="Your custom cap — front view" className="w-full block" />
+                </div>
               </div>
 
+              {/* Rear 3/4 view — only if needed */}
+              {needsRear && (
+                <div className="mt-6">
+                  <div className="section-label mb-2">REAR VIEW</div>
+
+                  {/* Rear loading */}
+                  {rearLoading && !rearResult && (
+                    <div className="rounded-xl flex flex-col items-center justify-center gap-3"
+                      style={{ aspectRatio: '1/1', backgroundColor: '#fafaf7', border: '1px solid #e8e1cf' }}>
+                      <Loader2 size={24} className="animate-spin" style={{ color: '#c2410c' }} />
+                      <span className="text-[10px] tracking-[0.2em]"
+                        style={{ fontFamily: 'JetBrains Mono, monospace', color: '#a39d8d' }}>
+                        RENDERING REAR VIEW
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Rear result */}
+                  {rearResult && !rearResult.error && (
+                    <div className="rounded-xl overflow-hidden mb-4"
+                      style={{ boxShadow: '0 8px 40px rgba(0,0,0,0.13), 0 2px 8px rgba(0,0,0,0.08)', border: '1px solid rgba(0,0,0,0.05)' }}>
+                      <img src={rearResult.imageUrl} alt="Your custom cap — rear view" className="w-full block" />
+                    </div>
+                  )}
+
+                  {/* Rear error */}
+                  {rearResult && rearResult.error && (
+                    <div className="rounded-xl p-5 flex flex-col items-center justify-center gap-3"
+                      style={{ backgroundColor: '#fdf8f8', border: '1px solid #f4c0c0' }}>
+                      <span className="text-[10px]" style={{ color: '#a83232', fontFamily: 'JetBrains Mono, monospace' }}>
+                        REAR VIEW FAILED — {rearResult.error}
+                      </span>
+                      <button onClick={handleRetryRear}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded text-[10px] transition-colors hover:bg-red-50"
+                        style={{ border: '1px solid #a83232', color: '#a83232', fontFamily: 'JetBrains Mono, monospace', background: 'transparent', cursor: 'pointer' }}>
+                        <RefreshCw size={10} /> RETRY REAR
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Rear not started yet (edge case) */}
+                  {!rearLoading && !rearResult && (
+                    <button onClick={handleRetryRear}
+                      className="w-full rounded-xl flex flex-col items-center justify-center gap-3 transition-colors"
+                      style={{ aspectRatio: '1/1', backgroundColor: '#f8f6f0', border: '1.5px dashed #d6d0c0', cursor: 'pointer' }}
+                      onMouseEnter={e => e.currentTarget.style.backgroundColor = '#f0ece2'}
+                      onMouseLeave={e => e.currentTarget.style.backgroundColor = '#f8f6f0'}>
+                      <RearCapOutline />
+                      <span className="text-[9px] tracking-[0.2em]"
+                        style={{ fontFamily: 'JetBrains Mono, monospace', color: '#a39d8d' }}>
+                        GENERATE REAR VIEW
+                      </span>
+                    </button>
+                  )}
+                </div>
+              )}
+
               {/* Actions */}
-              <div className="flex gap-3 mb-6">
+              <div className="flex gap-3 mt-6">
                 <button onClick={handleGenerate}
                   className="flex-1 flex items-center justify-center gap-2 py-3 rounded-md text-sm transition-colors hover:bg-neutral-100"
                   style={{ border: '1.5px solid #1a1a1a', fontFamily: 'Anton, sans-serif', letterSpacing: '0.04em', background: 'transparent', cursor: 'pointer' }}>
@@ -632,68 +730,6 @@ export default function CapPreview() {
                     VIEW YOUR CAP →
                   </a>
                 )}
-              </div>
-
-              {/* Model shots */}
-              <div className="pt-5" style={{ borderTop: '1px solid #d6d0c0' }}>
-                <div className="section-label mb-3">SEE IT ON MODELS</div>
-                <div className="grid grid-cols-3 gap-4">
-                  {Object.entries(MODEL_LABELS).map(([key, label]) => {
-                    const shot = modelShots[key];
-                    return (
-                      <div key={key} className="rounded-lg overflow-hidden"
-                        style={{ border: '1px solid #d6d0c0', backgroundColor: '#fff', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
-
-                        {shot === null && (
-                          <button onClick={() => handleModelShot(key)}
-                            className="w-full flex flex-col items-center justify-center gap-3 transition-colors"
-                            style={{ aspectRatio: '3/4', backgroundColor: '#f8f6f0', border: 'none', cursor: 'pointer' }}
-                            onMouseEnter={e => e.currentTarget.style.backgroundColor = '#f0ece2'}
-                            onMouseLeave={e => e.currentTarget.style.backgroundColor = '#f8f6f0'}>
-                            <PersonSilhouette />
-                            <span className="text-[9px] tracking-[0.2em]"
-                              style={{ fontFamily: 'JetBrains Mono, monospace', color: '#a39d8d' }}>
-                              {label.toUpperCase()}
-                            </span>
-                          </button>
-                        )}
-
-                        {shot === 'loading' && (
-                          <div className="w-full flex flex-col items-center justify-center gap-3"
-                            style={{ aspectRatio: '3/4', backgroundColor: '#fafaf7' }}>
-                            <Loader2 size={20} className="animate-spin" style={{ color: '#c2410c' }} />
-                            <span className="text-[9px] tracking-[0.2em]"
-                              style={{ fontFamily: 'JetBrains Mono, monospace', color: '#a39d8d' }}>
-                              {label.toUpperCase()}
-                            </span>
-                          </div>
-                        )}
-
-                        {shot && shot !== 'loading' && shot.imageUrl && (
-                          <>
-                            <img src={shot.imageUrl} alt={label} className="w-full block" />
-                            <button onClick={() => handleModelShot(key)}
-                              className="w-full flex items-center justify-center gap-1.5 py-2 text-[9px] transition-colors hover:bg-neutral-50"
-                              style={{ borderTop: '1px solid #f0ece2', fontFamily: 'JetBrains Mono, monospace', letterSpacing: '0.1em', color: '#a39d8d', background: 'transparent', border: 'none', cursor: 'pointer', borderTop: '1px solid #f0ece2' }}>
-                              <RefreshCw size={9} /> RETRY
-                            </button>
-                          </>
-                        )}
-
-                        {shot && shot !== 'loading' && shot.error && (
-                          <button onClick={() => handleModelShot(key)}
-                            className="w-full flex flex-col items-center justify-center gap-2 transition-colors"
-                            style={{ aspectRatio: '3/4', backgroundColor: '#fdf8f8', border: 'none', cursor: 'pointer' }}
-                            onMouseEnter={e => e.currentTarget.style.backgroundColor = '#fdf0f0'}
-                            onMouseLeave={e => e.currentTarget.style.backgroundColor = '#fdf8f8'}>
-                            <span className="text-[10px]" style={{ color: '#a83232', fontFamily: 'JetBrains Mono, monospace' }}>FAILED</span>
-                            <span className="text-[9px]" style={{ color: '#c4bfb0', fontFamily: 'JetBrains Mono, monospace' }}>TAP TO RETRY</span>
-                          </button>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
               </div>
             </div>
           )}
