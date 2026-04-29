@@ -22,35 +22,40 @@ function buildAutoPrompt(s) {
   if (s.hasSideRight) sideLogos.push('RIGHT side mesh panel');
 
   const imageRefs = hasSide
-    ? 'Image 1 is the FRONT PANEL LOGO. Image 2 is also the FRONT PANEL LOGO (emphasis). Image 3 is the SIDE PANEL DESIGN. Image 4 is also the SIDE PANEL DESIGN (emphasis). '
-    : 'Image 1 is the FRONT PANEL LOGO. Image 2 is also the FRONT PANEL LOGO (emphasis). ';
+    ? 'Image 1 is the REFERENCE CAP to edit. Image 2 and Image 3 are both the FRONT PANEL LOGO. Image 4 and Image 5 are both the SIDE PANEL DESIGN. '
+    : 'Image 1 is the REFERENCE CAP to edit. Image 2 and Image 3 are both the FRONT PANEL LOGO. ';
 
   const sideInstruction = sideLogos.length > 0
-    ? `Images 3 and 4 are both the SIDE PANEL DESIGN (same design for emphasis). Reproduce it EXACTLY on the ${sideLogos.join(' and ')} in the BOTTOM THIRD of the mesh panel, on top of the stripes — every shape, letter, colour, and detail must match precisely, including any white or light-coloured elements which must be reproduced as-is and NOT filled in or simplified. Raised 3D embroidery with visible stitches.`
+    ? `Images 4 and 5 are both the SIDE PANEL DESIGN (same design for emphasis). Reproduce it EXACTLY on the ${sideLogos.join(' and ')} in the lower mesh area, on top of any stripes — every shape, letter, colour, and detail must match precisely, including any white or light-coloured elements which must NOT be filled in or simplified. Raised 3D embroidery with visible stitches.`
     : '';
 
-  // Rotate through distinct design directions so Try Again always produces
-  // a meaningfully different colour combination and construction choice.
+  // Colour-direction cycling — varies each Try Again
   const directions = [
     'Choose a bold dark cap with high contrast elements.',
-    'Choose a lighter, neutral-toned cap with subtle complementary accents.',
+    'Choose a lighter neutral-toned cap with subtle complementary accents.',
     'Choose a vibrant colour that echoes a dominant colour from the logo.',
-    'Choose a classic two-tone combination — contrasting front and mesh colours.',
-    'Choose an understated monochrome look with a single accent stripe.',
-    'Choose a warm earthy tone palette that complements the logo.',
+    'Choose a classic two-tone — contrasting front and mesh colours.',
+    'Choose an understated monochrome with a single accent colour on the stripes.',
+    'Choose a warm earthy palette that complements the logo.',
     'Choose a cool-toned palette — navy, slate, or grey family.',
     'Be bold — choose an unexpected but commercially attractive colour combination.',
   ];
   const direction = directions[s.variationSeed % directions.length];
 
+  // Stripe count is already physically in the reference cap photo (Image 1).
+  // The AI keeps them and only changes their colour.
+  const stripeNote = s.stripeCount > 0
+    ? `The reference cap already has ${s.stripeCount} stripe${s.stripeCount > 1 ? 's' : ''} — keep them exactly where they are and choose a complementary stripe colour.`
+    : 'The reference cap has no stripes — keep it that way.';
+
   const parts = [
-    imageRefs + 'Realistic professional 3/4 view product mock of a 5 panel trucker cap, subject rotated 45 degrees to the left. PURE WHITE background — solid bright white (#ffffff), not grey, not off-white. Soft natural shadow directly beneath the cap only. No models, no hands, no props.',
-    'High crown structured front panel — solid square face, single piece of fabric, no visible centre seam. Mesh rear panels with clearly visible woven honeycomb texture. Clean sharp seam where solid front meets mesh sides. Pre-curved brim, smooth clean edge with absolutely no stitching, no topstitching, no stitch lines visible on the brim surface at all. Squatchee button on top crown. Snapback closure at rear.',
-    `Analyse Image 1 carefully. Based on the colours, style, and brand aesthetic of Image 1, choose the ideal cap colours: front panel, mesh, brim, and snapback. ${direction} Always include sewn side stripes — place them in the BOTTOM THIRD of the mesh panels close to the brim edge, NOT in the middle. Choose stripe count (1, 2, or 3) and colour that best complements the design. Decide whether a sandwich brim would complement the look. Make choices a professional cap designer would make.`,
-    'All embroidery is 3D puff raised above the cap surface with real physical elevation. Black outlined embroidery on all positions. Individual thread stitches clearly visible. Each embroidered element casts a shadow onto the cap fabric beneath it.',
-    'Image 1 is the front logo. Embroider Image 1 on the crown EXACTLY as shown — same shapes, same text, same proportions, same colours. Do NOT redraw, reinvent, simplify or substitute any part of Image 1. Image 2 confirms this — both are the same front logo.',
+    imageRefs + 'Edit Image 1, which is a photograph of a blank grey trucker cap. Keep the cap shape, construction, angle, lighting, mesh texture, brim shape, and stripe placement EXACTLY as they are in Image 1. Only make the colour and embroidery changes described below.',
+    'Preserve from Image 1 exactly: the crown shape, front panel, mesh panels, brim curve, squatchee button, snapback closure, and any stripe positions. Do not move, add, or remove stripes. No topstitching on the brim.',
+    `Analyse the logo in Images 2 and 3. Based on its colours, style, and brand aesthetic, choose the ideal cap colours: front panel, mesh, brim, and snapback. ${direction} ${stripeNote} Decide whether a sandwich brim would complement the look. Make choices a professional cap designer would make.`,
+    'All logos rendered as 3D puff embroidery raised above the cap surface. Black outlined embroidery on all positions. Individual thread stitches clearly visible.',
+    'Images 2 and 3 are the front logo. Embroider it on the centre of the front panel EXACTLY as shown — same shapes, same text, same proportions, same colours. Do NOT redraw, simplify, or substitute any part.',
     sideInstruction,
-    'Exclude: models, persons, hands, mannequins, multiple caps, extra brims, grey background, coloured background, busy background, props, lens flare, flat printed logos, screen printed logos, stitching on brim surface, low-profile cap, baseball cap, fitted cap, dad hat.',
+    'Do not change the cap shape or construction. Do not move or add stripes. Do not add stripes to the brim. Do not add topstitching to the brim. Do not add a model or person. Do not change the background.',
   ].filter(Boolean).join(' ');
 
   return parts;
@@ -142,9 +147,16 @@ export async function POST(request) {
     }
 
     // Build prompt server-side
-    const prompt = mode === 'model' ? buildModelPrompt(modelKey, settings)
-                 : mode === 'auto'  ? buildAutoPrompt(settings)
-                 :                    buildProductPrompt(settings);
+    // In auto mode, use variationSeed to determine stripe count (cycles 0→1→2→3→0...)
+    // so the reference cap matches what the AI is asked to work with.
+    const autoStripeCount = mode === 'auto' ? settings.variationSeed % 4 : settings.stripeCount;
+    const effectiveSettings = mode === 'auto'
+      ? { ...settings, stripeCount: autoStripeCount }
+      : settings;
+
+    const prompt = mode === 'model' ? buildModelPrompt(modelKey, effectiveSettings)
+                 : mode === 'auto'  ? buildAutoPrompt(effectiveSettings)
+                 :                    buildProductPrompt(effectiveSettings);
 
     // Convert logo files to base64 (with in-memory cache for re-generates)
     const frontImg = await fileToBase64Cached(frontFile);
@@ -200,9 +212,9 @@ export async function POST(request) {
       // ── Pick the correct reference cap based on stripe count ─────────────
       // These are real photographs of blank caps with the correct stripe
       // placement — Gemini edits them rather than generating from scratch.
-      const refFilename = settings.stripeCount === 1 ? 'cap-1stripe.jpg'
-                        : settings.stripeCount === 2 ? 'cap-2stripe.jpg'
-                        : settings.stripeCount === 3 ? 'cap-3stripe.jpg'
+      const refFilename = effectiveSettings.stripeCount === 1 ? 'cap-1stripe.jpg'
+                        : effectiveSettings.stripeCount === 2 ? 'cap-2stripe.jpg'
+                        : effectiveSettings.stripeCount === 3 ? 'cap-3stripe.jpg'
                         : 'cap-0stripe.jpg';
 
       const host     = headersList.get('host') || 'localhost:3000';
