@@ -12,7 +12,7 @@ import { GoogleGenAI } from '@google/genai';
 import { put } from '@vercel/blob';
 import { headers } from 'next/headers';
 import { createHash } from 'crypto';
-import { buildProductPrompt, buildModelPrompt } from '../../../lib/prompts.js';
+import { buildProductPrompt, buildModelPrompt, buildAutoPrompt } from '../../../lib/prompts.js';
 
 export const maxDuration = 60;
 
@@ -98,9 +98,9 @@ export async function POST(request) {
     }
 
     // Build prompt server-side
-    const prompt = mode === 'model'
-      ? buildModelPrompt(modelKey, settings)
-      : buildProductPrompt(settings);
+    const prompt = mode === 'model' ? buildModelPrompt(modelKey, settings)
+                 : mode === 'auto'  ? buildAutoPrompt(settings)
+                 :                    buildProductPrompt(settings);
 
     // Convert logo files to base64 (with in-memory cache for re-generates)
     const frontImg = await fileToBase64Cached(frontFile);
@@ -110,37 +110,12 @@ export async function POST(request) {
     // The Google GenAI SDK for JS takes an array of parts in `contents`.
     const parts = [];
 
-    if (mode === 'model') {
-      // Model shots: prompt first, then logo twice for emphasis
+    if (mode === 'model') {      // Model shots: prompt first, then logo twice for emphasis
       parts.push({ text: prompt });
       parts.push({ inlineData: { mimeType: frontImg.mimeType, data: frontImg.data } });
       parts.push({ inlineData: { mimeType: frontImg.mimeType, data: frontImg.data } });
     } else {
-      // Product shots: base cap reference + prompt + customer logo(s)
-      const host     = headersList.get('host') || 'localhost:3000';
-      const protocol = host.includes('localhost') ? 'http' : 'https';
-      const capRefUrl = `${protocol}://${host}/cap-reference.jpg`;
-
-      // Fetch the base cap reference image and convert to base64
-      // We fetch it as a URL since it lives in /public — no file system access needed
-      let capRefPart = null;
-      try {
-        const capRefResp = await fetch(capRefUrl);
-        if (capRefResp.ok) {
-          const capRefBuffer = Buffer.from(await capRefResp.arrayBuffer());
-          capRefPart = {
-            inlineData: {
-              mimeType: 'image/jpeg',
-              data: capRefBuffer.toString('base64'),
-            },
-          };
-        }
-      } catch {
-        // Non-fatal — continue without base cap reference if it fails
-        console.warn('Could not fetch cap reference image, continuing without it.');
-      }
-
-      // ── Product shot assembly ─────────────────────────────────────────
+      // Product and Auto shots — logo as image 1, side logo or emphasis as image 2      // ── Product shot assembly ─────────────────────────────────────────
       // Gemini reads parts sequentially. Putting the prompt FIRST with
       // explicit "image 1 / image 2" references, then the images in that
       // same order, gives the model clear anchors.
@@ -191,7 +166,7 @@ export async function POST(request) {
         thinkingConfig: {
           // 'minimal' = lowest latency while still using reasoning
           // Change to 'high' for higher quality at the cost of more wait time
-          thinkingLevel: 'high',
+          thinkingLevel: 'minimal',
         },
       },
     });
