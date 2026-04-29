@@ -16,10 +16,9 @@ import { buildProductPrompt, buildModelPrompt } from '../../../lib/prompts.js';
 
 // buildAutoPrompt defined inline here to avoid stale module cache issues
 function buildAutoPrompt(s) {
-  const hasSide = s.hasSideLeft || s.hasSideRight;
+  const hasSide = s.hasSide;
   const sideLogos = [];
-  if (s.hasSideLeft)  sideLogos.push('LEFT side mesh panel');
-  if (s.hasSideRight) sideLogos.push('RIGHT side mesh panel');
+  if (s.hasSide) sideLogos.push('side mesh panel');
 
   const imageRefs = hasSide
     ? 'Image 1 is the REFERENCE CAP to edit. Image 2 and Image 3 are both the FRONT PANEL LOGO. Image 4 and Image 5 are both the SIDE PANEL DESIGN. '
@@ -51,7 +50,7 @@ function buildAutoPrompt(s) {
   const parts = [
     imageRefs + 'Edit Image 1, which is a photograph of a blank grey trucker cap. Keep the cap shape, construction, angle, lighting, mesh texture, brim shape, and stripe placement EXACTLY as they are in Image 1. Only make the colour and embroidery changes described below.',
     'Preserve from Image 1 exactly: the crown shape, front panel, mesh panels, brim curve, squatchee button, snapback closure, and any stripe positions. Do not move, add, or remove stripes. No topstitching on the brim.',
-    `Analyse the logo in Images 2 and 3. Based on its colours, style, and brand aesthetic, choose the ideal cap colours: front panel, mesh, brim, and snapback. ${direction} ${stripeNote} Decide whether a sandwich brim would complement the look. Make choices a professional cap designer would make.`,
+    `Analyse the logo in Images 2 and 3. Based on its colours, style, and brand aesthetic, choose the ideal cap colours: front panel, mesh, and brim. ${direction} ${stripeNote} Decide whether a sandwich brim would complement the look. Make choices a professional cap designer would make.`,
     'All logos rendered as 3D puff embroidery raised above the cap surface. Black outlined embroidery on all positions. Individual thread stitches clearly visible.',
     'Images 2 and 3 are the front logo. Embroider it on the centre of the front panel EXACTLY as shown — same shapes, same text, same proportions, same colours. Do NOT redraw, simplify, or substitute any part.',
     sideInstruction,
@@ -121,24 +120,21 @@ export async function POST(request) {
     const mode        = formData.get('mode') || 'product';
     const modelKey    = formData.get('modelKey') || 'male';
     const frontFile   = formData.get('design_front');
-    const leftFile    = formData.get('design_leftSide');
-    const rightFile   = formData.get('design_rightSide');
-    const capImageUrl = formData.get('cap_image_url') || null; // rendered cap for model shots
+    const sideFile    = formData.get('design_side');
+    const capImageUrl = formData.get('cap_image_url') || null;
 
     // Structured settings — prompt assembled server-side from these
     const settings = {
       colors: {
-        front:    formData.get('color_front')    || '#1a1a1a',
-        mesh:     formData.get('color_mesh')     || '#1a1a1a',
-        brim:     formData.get('color_brim')     || '#1a1a1a',
-        snapback: formData.get('color_snapback') || '#1a1a1a',
+        front: formData.get('color_front') || '#1a1a1a',
+        mesh:  formData.get('color_mesh')  || '#1a1a1a',
+        brim:  formData.get('color_brim')  || '#1a1a1a',
       },
       stripeCount:   Number(formData.get('stripeCount') || 0),
       stripeColor:   formData.get('stripeColor')   || '#ffffff',
       sandwichBrim:  formData.get('sandwichBrim')  === 'true',
       sandwichColor: formData.get('sandwichColor') || '#c2410c',
-      hasSideLeft:   !!leftFile  && leftFile.size  > 0,
-      hasSideRight:  !!rightFile && rightFile.size > 0,
+      hasSide:       !!sideFile && sideFile.size > 0,
       variationSeed: Number(formData.get('variationSeed') || 0),
     };
 
@@ -233,32 +229,17 @@ export async function POST(request) {
       }
 
       // ── Assemble parts ────────────────────────────────────────────────────
-      // Slot order: reference cap → prompt → front logo × 2 → side logo × 2
-      // The reference cap is the base image being edited — it comes FIRST
-      // so Gemini treats it as the canvas, not as an inspiration image.
-      const hasSide = settings.hasSideLeft || settings.hasSideRight;
-      const sideFile = settings.hasSideLeft ? leftFile
-                     : settings.hasSideRight ? rightFile
-                     : null;
-      const sideImg = sideFile ? await fileToBase64Cached(sideFile) : null;
+      const sideImg = settings.hasSide ? await fileToBase64Cached(sideFile) : null;
 
-      // Slot naming for the prompt
-      // ref cap = Image 1, front logo = Image 2 (+ 3 emphasis), side = Image 4 (+ 5 emphasis)
-      const imageRefs = hasSide
+      const imageRefs = settings.hasSide
         ? 'Image 1 is the REFERENCE CAP to edit. Image 2 and Image 3 are both the FRONT PANEL LOGO. Image 4 and Image 5 are both the SIDE PANEL DESIGN. '
         : 'Image 1 is the REFERENCE CAP to edit. Image 2 and Image 3 are both the FRONT PANEL LOGO. ';
 
-      // Reference cap first (the canvas)
       if (refPart) parts.push(refPart);
-
-      // Prompt
       parts.push({ text: imageRefs + prompt });
-
-      // Front logo × 2
       parts.push({ inlineData: { mimeType: frontImg.mimeType, data: frontImg.data } });
       parts.push({ inlineData: { mimeType: frontImg.mimeType, data: frontImg.data } });
 
-      // Side design × 2 if uploaded
       if (sideImg) {
         parts.push({ inlineData: { mimeType: sideImg.mimeType, data: sideImg.data } });
         parts.push({ inlineData: { mimeType: sideImg.mimeType, data: sideImg.data } });
