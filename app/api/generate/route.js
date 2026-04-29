@@ -22,11 +22,11 @@ function buildAutoPrompt(s) {
   if (s.hasSide) sideLogos.push('side mesh panel');
 
   const imageRefs = hasSide
-    ? 'Image 1 is the REFERENCE CAP to edit. Image 2 and Image 3 are both the FRONT PANEL LOGO. Image 4 and Image 5 are both the SIDE PANEL DESIGN. '
-    : 'Image 1 is the REFERENCE CAP to edit. Image 2 and Image 3 are both the FRONT PANEL LOGO. ';
+    ? 'Image 1 is the REFERENCE CAP to edit. Image 2 is the FRONT PANEL LOGO. Image 3 is the SIDE PANEL DESIGN. '
+    : 'Image 1 is the REFERENCE CAP to edit. Image 2 is the FRONT PANEL LOGO. ';
 
   const sideInstruction = sideLogos.length > 0
-    ? `Images 4 and 5 are both the SIDE PANEL DESIGN (same design for emphasis). Reproduce it EXACTLY on the ${sideLogos.join(' and ')} in the lower mesh area, on top of any stripes — every shape, letter, colour, and detail must match precisely, including any white or light-coloured elements which must NOT be filled in or simplified. Raised 3D embroidery with visible stitches. The side design must be embroidered SMALL — it is a small accent badge, approximately 1/4 to 1/3 the size of the front panel logo. Do NOT scale it to fill the side mesh panel.`
+    ? `Image 3 is the SIDE PANEL DESIGN. Reproduce it EXACTLY on the ${sideLogos.join(' and ')} in the lower mesh area, on top of any stripes — every shape, letter, colour, and detail must match precisely, including any white or light-coloured elements which must NOT be filled in or simplified. Raised 3D embroidery with visible stitches. The side design must be embroidered SMALL — it is a small accent badge, approximately 1/4 to 1/3 the size of the front panel logo. Do NOT scale it to fill the side mesh panel.`
     : '';
 
   // Colour-direction cycling — varies each Try Again
@@ -89,11 +89,26 @@ async function fileToBase64Cached(file) {
   const buffer = Buffer.from(await file.arrayBuffer());
   const hash   = createHash('sha256').update(buffer).digest('hex').slice(0, 16);
   if (base64Cache.has(hash)) {
-    return { data: base64Cache.get(hash), mimeType: file.type || 'image/png' };
+    return { data: base64Cache.get(hash), mimeType: file.type || 'image/png', hash };
   }
   const b64 = buffer.toString('base64');
   base64Cache.set(hash, b64);
-  return { data: b64, mimeType: file.type || 'image/png' };
+  return { data: b64, mimeType: file.type || 'image/png', hash };
+}
+
+// ── Result cache ───────────────────────────────────────────────────────────
+// Caches rendered image URL+shareId by a hash of all inputs.
+// Same logo + same colours + same config = instant free result.
+// Resets on cold starts (in-memory only) — that's fine for this use case.
+const resultCache = new Map();
+
+function buildCacheKey(mode, frontHash, sideHash, effectiveSettings) {
+  if (mode === 'auto') {
+    return `auto:${frontHash}:${sideHash}:${effectiveSettings.variationSeed}`;
+  }
+  const { colors, stripeCount, stripeColor, sandwichBrim, sandwichColor } = effectiveSettings;
+  return [`product`, frontHash, sideHash, colors.front, colors.mesh, colors.brim,
+          stripeCount, stripeColor, sandwichBrim, sandwichColor].join(':');
 }
 
 // ── Side logo scaling ──────────────────────────────────────────────────────
@@ -187,6 +202,15 @@ export async function POST(request) {
 
     // Convert logo files to base64 (with in-memory cache for re-generates)
     const frontImg = await fileToBase64Cached(frontFile);
+    const sideImgForKey = settings.hasSide ? await fileToBase64Scaled(sideFile) : null;
+
+    // ── Result cache check ────────────────────────────────────────────────────
+    // Skip generation entirely if we've already rendered this exact configuration.
+    const cacheKey = buildCacheKey(mode, frontImg.hash, sideImgForKey?.hash || 'none', effectiveSettings);
+    if (resultCache.has(cacheKey)) {
+      console.log('Cache hit:', cacheKey.slice(0, 40));
+      return Response.json(resultCache.get(cacheKey));
+    }
 
     // ── Build the Gemini contents array ────────────────────────────────────
     // Format: [text_part, image_part, image_part, ...]
@@ -213,15 +237,13 @@ export async function POST(request) {
             throw new Error('Could not fetch rendered cap');
           }
         } catch {
-          // Fallback to logo-only if cap image fetch fails
+          // Fallback: logo-only
           parts.push({ text: prompt });
-          parts.push({ inlineData: { mimeType: frontImg.mimeType, data: frontImg.data } });
           parts.push({ inlineData: { mimeType: frontImg.mimeType, data: frontImg.data } });
         }
       } else {
         // No cap image provided — fall back to logo-based approach
         parts.push({ text: prompt });
-        parts.push({ inlineData: { mimeType: frontImg.mimeType, data: frontImg.data } });
         parts.push({ inlineData: { mimeType: frontImg.mimeType, data: frontImg.data } });
       }
     } else {
@@ -260,21 +282,20 @@ export async function POST(request) {
       }
 
       // ── Assemble parts ────────────────────────────────────────────────────
-      // Side logo is pre-scaled to ~280px so Gemini places it proportionally small
-      const sideImg = settings.hasSide ? await fileToBase64Scaled(sideFile) : null;
+      // Side logo already pre-scaled to ~280px (computed above for cache key)
+      const sideImg = sideImgForKey;
 
+      // Image numbering: ref cap = 1, front logo = 2, side design = 3 (if uploaded)
       const imageRefs = settings.hasSide
-        ? 'Image 1 is the REFERENCE CAP to edit. Image 2 and Image 3 are both the FRONT PANEL LOGO. Image 4 and Image 5 are both the SIDE PANEL DESIGN. '
-        : 'Image 1 is the REFERENCE CAP to edit. Image 2 and Image 3 are both the FRONT PANEL LOGO. ';
+        ? 'Image 1 is the REFERENCE CAP to edit. Image 2 is the FRONT PANEL LOGO. Image 3 is the SIDE PANEL DESIGN. '
+        : 'Image 1 is the REFERENCE CAP to edit. Image 2 is the FRONT PANEL LOGO. ';
 
       if (refPart) parts.push(refPart);
       parts.push({ text: imageRefs + prompt });
-      parts.push({ inlineData: { mimeType: frontImg.mimeType, data: frontImg.data } });
-      parts.push({ inlineData: { mimeType: frontImg.mimeType, data: frontImg.data } });
+      parts.push({ inlineData: { mimeType: frontImg.mimeType, data: frontImg.data } }); // Image 2
 
       if (sideImg) {
-        parts.push({ inlineData: { mimeType: sideImg.mimeType, data: sideImg.data } });
-        parts.push({ inlineData: { mimeType: sideImg.mimeType, data: sideImg.data } });
+        parts.push({ inlineData: { mimeType: sideImg.mimeType, data: sideImg.data } }); // Image 3
       }
     }
 
@@ -289,7 +310,7 @@ export async function POST(request) {
         responseModalities: ['IMAGE', 'TEXT'],
         imageConfig: {
           aspectRatio: '1:1',
-          imageSize: '1K',
+          imageSize: '512', // 512px saves 33% vs 1K — fine for a preview tool
         },
         thinkingConfig: {
           // 'minimal' = lowest latency while still using reasoning
@@ -363,7 +384,10 @@ export async function POST(request) {
       permanentImageUrl = `data:${imageMime};base64,${imageBase64}`;
     }
 
-    return Response.json({ imageUrl: permanentImageUrl, shareId });
+    const result = { imageUrl: permanentImageUrl, shareId };
+    // Cache the result so identical requests return instantly
+    resultCache.set(cacheKey, result);
+    return Response.json(result);
   } catch (err) {
     console.error('Generation error:', err);
     // Surface useful error messages for common API issues
