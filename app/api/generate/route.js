@@ -77,10 +77,10 @@ function buildFrontProductPrompt(s) {
   const colourLine = `Change the cap colours: make the front panel ${front}, the mesh ${mesh}, and the brim ${brim}.`
     + (s.sandwichBrim ? ` Add a sandwich brim — a contrasting ${describeColor(s.sandwichColor)} layer visible along the underside edge of the brim.` : '');
   const stripeLine = s.stripeCount === 0 ? ''
-    : `Change the stripe colour to ${describeColor(s.stripeColor)}. Keep the stripes exactly where they are in Image 1 — do not move them.`;
+    : `Change the stripe colour to ${describeColor(s.stripeColor)}. Keep the stripes exactly AS IS in Image 1 — do NOT move them.`;
 
   const rightLogoLine = s.hasRight
-    ? `Image 3 is the RIGHT SIDE DESIGN. Reproduce it EXACTLY on the right side mesh panel — every shape, letter, colour, and detail must match precisely, including any white or light-coloured elements. The embroidery is sewn ON TOP OF any stripes — the logo sits in the foreground, stripes in the background, partially covered by the embroidery. Raised 3D embroidery with visible stitches. The side design must be embroidered SMALL — approximately 1/3 to 1/3 the size of the front panel logo. Do NOT scale it to fill the mesh panel.`
+    ? `Image 3 is the RIGHT SIDE DESIGN. Reproduce it EXACTLY on the right side mesh panel — every shape, letter, colour, and detail must match precisely, including any white or light-coloured elements. The embroidery is sewn ON TOP OF any stripes — the logo sits in the foreground, stripes in the background, partially covered by the embroidery. Raised 3D embroidery with visible stitches. The side design must be embroidered SMALL — approximately 1/4 to 1/5 the size of the front panel logo. Do NOT scale it to fill the mesh panel.`
     : '';
 
   return [P.subject, P.construction, colourLine, stripeLine, P.embroidery, P.logoLockdown, rightLogoLine, P.avoid].filter(Boolean).join(' ');
@@ -102,7 +102,7 @@ function buildRearProductPrompt(s) {
   let imgIndex = 2;
 
   if (s.hasRear) {
-    logoLines.push(`Image ${imgIndex} is the REAR LOGO. Embroider it on the centre back of the cap above the snapback closure — same shapes, same text, same proportions, same colours. The 3D embroidery should be SMALL — a small accent badge, approximately 1/3 to 1/2 the size of a front panel logo. Raised 3D high detail embroidery with visible stitches. Do NOT scale it to fill the back panel.`);
+    logoLines.push(`Image ${imgIndex} is the REAR LOGO. Embroider it on the centre back of the cap above the snapback closure — same shapes, same text, same proportions, same colours. The 3D embroidery should be SMALL — a small accent badge, approximately 1/4 to 1/5 the size of a front panel logo. Raised 3D high detail embroidery with visible stitches. Do NOT scale it to fill the back panel.`);
     imgIndex++;
   }
   if (s.hasLeft) {
