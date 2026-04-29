@@ -26,7 +26,7 @@ function buildAutoPrompt(s) {
     : 'Image 1 is the FRONT PANEL LOGO. Image 2 is also the FRONT PANEL LOGO (emphasis). ';
 
   const sideInstruction = sideLogos.length > 0
-    ? `Image 3 is the SIDE PANEL DESIGN. Reproduce Image 3 EXACTLY on the ${sideLogos.join(' and ')} on the lower mesh — every shape, letter, colour, and detail must match Image 3 precisely. Render as raised 3D embroidery with black outline, visible stitches.`
+    ? `Images 3 and 4 are both the SIDE PANEL DESIGN (same design for emphasis). Reproduce it EXACTLY on the ${sideLogos.join(' and ')} in the BOTTOM THIRD of the mesh panel, on top of the stripes — every shape, letter, colour, and detail must match precisely, including any white or light-coloured elements which must be reproduced as-is and NOT filled in or simplified. Raised 3D embroidery with visible stitches.`
     : '';
 
   // Rotate through distinct design directions so Try Again always produces
@@ -46,7 +46,7 @@ function buildAutoPrompt(s) {
   const parts = [
     imageRefs + 'Realistic professional 3/4 view product mock of a 5 panel trucker cap, subject rotated 45 degrees to the left. PURE WHITE background — solid bright white (#ffffff), not grey, not off-white. Soft natural shadow directly beneath the cap only. No models, no hands, no props.',
     'High crown structured front panel — solid square face, single piece of fabric, no visible centre seam. Mesh rear panels with clearly visible woven honeycomb texture. Clean sharp seam where solid front meets mesh sides. Pre-curved brim, smooth clean edge with absolutely no stitching, no topstitching, no stitch lines visible on the brim surface at all. Squatchee button on top crown. Snapback closure at rear.',
-    `Analyse Image 1 carefully. Based on the colours, style, and brand aesthetic of Image 1, choose the ideal cap colours: front panel, mesh, brim, and snapback. ${direction} Always include sewn side stripes on the mesh panels — choose the stripe count (1, 2, or 3) and stripe colour that best complements the design. Decide whether a sandwich brim would complement the look. Make choices a professional cap designer would make. Prioritise bold, clean, commercially attractive results.`,
+    `Analyse Image 1 carefully. Based on the colours, style, and brand aesthetic of Image 1, choose the ideal cap colours: front panel, mesh, brim, and snapback. ${direction} Always include sewn side stripes — place them in the BOTTOM THIRD of the mesh panels close to the brim edge, NOT in the middle. Choose stripe count (1, 2, or 3) and colour that best complements the design. Decide whether a sandwich brim would complement the look. Make choices a professional cap designer would make.`,
     'All embroidery is 3D puff raised above the cap surface with real physical elevation. Black outlined embroidery on all positions. Individual thread stitches clearly visible. Each embroidered element casts a shadow onto the cap fabric beneath it.',
     'Image 1 is the front logo. Embroider Image 1 on the crown EXACTLY as shown — same shapes, same text, same proportions, same colours. Do NOT redraw, reinvent, simplify or substitute any part of Image 1. Image 2 confirms this — both are the same front logo.',
     sideInstruction,
