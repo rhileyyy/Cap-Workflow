@@ -48,7 +48,7 @@ function buildAutoPrompt(s) {
     'High crown structured front panel — solid square face, single piece of fabric, no visible centre seam. Mesh rear panels with clearly visible woven honeycomb texture. Clean sharp seam where solid front meets mesh sides. Pre-curved brim, smooth clean edge with absolutely no stitching, no topstitching, no stitch lines visible on the brim surface at all. Squatchee button on top crown. Snapback closure at rear.',
     `Analyse Image 1 carefully. Based on the colours, style, and brand aesthetic of Image 1, choose the ideal cap colours: front panel, mesh, brim, and snapback. ${direction} Always include sewn side stripes on the mesh panels — choose the stripe count (1, 2, or 3) and stripe colour that best complements the design. Decide whether a sandwich brim would complement the look. Make choices a professional cap designer would make. Prioritise bold, clean, commercially attractive results.`,
     'All embroidery is 3D puff raised above the cap surface with real physical elevation. Black outlined embroidery on all positions. Individual thread stitches clearly visible. Each embroidered element casts a shadow onto the cap fabric beneath it.',
-    'Image 1 is the front logo. Embroider Image 1 centredon the crown EXACTLY as shown — Precise/Accurate, In-Depth, same shapes, same text, same proportions, same colours. Do NOT redraw, Add, reinvent, simplify or substitute any part of Image 1. Scale to fit cap correctly',
+    'Image 1 is the front logo. Embroider Image 1 on the crown EXACTLY as shown — same shapes, same text, same proportions, same colours. Do NOT redraw, reinvent, simplify or substitute any part of Image 1.',
     sideInstruction,
     'Exclude: models, persons, hands, mannequins, multiple caps, extra brims, grey background, coloured background, busy background, props, lens flare, flat printed logos, screen printed logos, stitching on brim surface, low-profile cap, baseball cap, fitted cap, dad hat.',
   ].filter(Boolean).join(' ');
@@ -112,12 +112,13 @@ export async function POST(request) {
     }
 
     // Parse request
-    const formData  = await request.formData();
-    const mode      = formData.get('mode') || 'product';
-    const modelKey  = formData.get('modelKey') || 'male';
-    const frontFile = formData.get('design_front');
-    const leftFile  = formData.get('design_leftSide');
-    const rightFile = formData.get('design_rightSide');
+    const formData    = await request.formData();
+    const mode        = formData.get('mode') || 'product';
+    const modelKey    = formData.get('modelKey') || 'male';
+    const frontFile   = formData.get('design_front');
+    const leftFile    = formData.get('design_leftSide');
+    const rightFile   = formData.get('design_rightSide');
+    const capImageUrl = formData.get('cap_image_url') || null; // rendered cap for model shots
 
     // Structured settings — prompt assembled server-side from these
     const settings = {
@@ -153,10 +154,37 @@ export async function POST(request) {
     // The Google GenAI SDK for JS takes an array of parts in `contents`.
     const parts = [];
 
-    if (mode === 'model') {      // Model shots: prompt first, then logo twice for emphasis
-      parts.push({ text: prompt });
-      parts.push({ inlineData: { mimeType: frontImg.mimeType, data: frontImg.data } });
-      parts.push({ inlineData: { mimeType: frontImg.mimeType, data: frontImg.data } });
+    if (mode === 'model') {
+      // Model shots: use the already-rendered cap as the primary reference.
+      // The model just needs to put this exact cap on a person — no need to
+      // rebuild the cap from a text description.
+      if (capImageUrl) {
+        try {
+          const capResp = await fetch(capImageUrl);
+          if (capResp.ok) {
+            const capBuffer = Buffer.from(await capResp.arrayBuffer());
+            const capBase64 = capBuffer.toString('base64');
+            const capMime   = capResp.headers.get('content-type') || 'image/jpeg';
+            // Slot 1: the rendered cap (primary reference — this is what the person wears)
+            parts.push({ text: prompt });
+            parts.push({ inlineData: { mimeType: capMime, data: capBase64 } });
+            // Slot 2: front logo (for logo accuracy on the worn cap)
+            parts.push({ inlineData: { mimeType: frontImg.mimeType, data: frontImg.data } });
+          } else {
+            throw new Error('Could not fetch rendered cap');
+          }
+        } catch {
+          // Fallback to logo-only if cap image fetch fails
+          parts.push({ text: prompt });
+          parts.push({ inlineData: { mimeType: frontImg.mimeType, data: frontImg.data } });
+          parts.push({ inlineData: { mimeType: frontImg.mimeType, data: frontImg.data } });
+        }
+      } else {
+        // No cap image provided — fall back to logo-based approach
+        parts.push({ text: prompt });
+        parts.push({ inlineData: { mimeType: frontImg.mimeType, data: frontImg.data } });
+        parts.push({ inlineData: { mimeType: frontImg.mimeType, data: frontImg.data } });
+      }
     } else {
       // Product and Auto shots — logo as image 1, side logo or emphasis as image 2      // ── Product shot assembly ─────────────────────────────────────────
       // Gemini reads parts sequentially. Putting the prompt FIRST with
