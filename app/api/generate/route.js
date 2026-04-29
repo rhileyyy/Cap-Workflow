@@ -52,7 +52,7 @@ function buildAutoPrompt(s) {
     imageRefs + 'Edit Image 1, which is a photograph of a blank grey trucker cap. Keep the cap shape, construction, angle, lighting, mesh texture, brim shape, and stripe placement EXACTLY as they are in Image 1. Only make the colour and embroidery changes described below.',
     'Preserve from Image 1 exactly: the crown shape, front panel, mesh panels, brim curve, squatchee button, snapback closure, and any stripe positions. Do not move, add, or remove stripes. No topstitching on the brim.',
     `Analyse the logo in Images 2 and 3. Based on its colours, style, and brand aesthetic, choose the ideal cap colours: front panel, mesh, and brim. ${direction} ${stripeNote} Decide whether a sandwich brim would complement the look. Make choices a professional cap designer would make.`,
-    'All logos rendered as 3D puff embroidery raised above the cap surface. Black outlined embroidery on all positions. Individual thread stitches clearly visible.',
+    'All logos rendered as 3D high quality embroidery raised above the cap surface. Black outlined embroidery on all positions. Individual thread stitches clearly visible.',
     'Images 2 and 3 are the front logo. Embroider it on the centre of the front panel EXACTLY as shown — same shapes, same text, same proportions, same colours. Do NOT redraw, simplify, or substitute any part.',
     sideInstruction,
     'Do not change the cap shape or construction. Do not move or add stripes. Do not add stripes to the brim. Do not add topstitching to the brim. Do not add a model or person. Do not change the background.',
@@ -310,7 +310,7 @@ export async function POST(request) {
         responseModalities: ['IMAGE', 'TEXT'],
         imageConfig: {
           aspectRatio: '1:1',
-          imageSize: '512', // 512px saves 33% vs 1K — fine for a preview tool
+          imageSize: '1000', // 512px saves 33% vs 1K — fine for a preview tool
         },
         thinkingConfig: {
           // 'minimal' = lowest latency while still using reasoning
