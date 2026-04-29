@@ -47,23 +47,23 @@ function describeColor(hex) {
   const brightness = (r*299+g*587+b*114)/1000;
   const max = Math.max(r,g,b), min = Math.min(r,g,b);
   const saturation = max === 0 ? 0 : (max-min)/max;
-  if (brightness > 230) return 'white';
-  if (brightness < 30) return 'black';
-  if (brightness > 180 && saturation < 0.1) return 'light grey';
-  if (brightness > 120 && saturation < 0.1) return 'grey';
-  if (brightness > 60 && saturation < 0.1) return 'dark grey';
-  if (brightness < 60 && saturation < 0.15) return 'near black';
+  if (brightness > 230) return `white (${hex})`;
+  if (brightness < 30) return `black (${hex})`;
+  if (brightness > 180 && saturation < 0.1) return `light grey (${hex})`;
+  if (brightness > 120 && saturation < 0.1) return `grey (${hex})`;
+  if (brightness > 60 && saturation < 0.1) return `dark grey (${hex})`;
+  if (brightness < 60 && saturation < 0.15) return `near black (${hex})`;
   if (saturation < 0.15) return `grey (${hex})`;
   const hue = Math.round(Math.atan2(Math.sqrt(3)*(g-b), 2*r-g-b)*180/Math.PI);
   const h360 = (hue+360)%360;
-  if (h360 < 15 || h360 >= 345) return brightness < 100 ? 'dark red' : 'red';
-  if (h360 < 45) return brightness < 100 ? 'dark orange' : 'orange';
-  if (h360 < 70) return brightness < 120 ? 'dark yellow' : 'yellow';
-  if (h360 < 150) return brightness < 100 ? 'dark green' : 'green';
-  if (h360 < 195) return brightness < 100 ? 'dark teal' : 'teal';
-  if (h360 < 255) return brightness < 100 ? 'navy blue' : 'blue';
-  if (h360 < 290) return brightness < 100 ? 'dark purple' : 'purple';
-  if (h360 < 345) return brightness < 100 ? 'dark pink' : 'pink';
+  if (h360 < 15 || h360 >= 345) return brightness < 100 ? `dark red (${hex})` : `red (${hex})`;
+  if (h360 < 45) return brightness < 100 ? `dark orange (${hex})` : `orange (${hex})`;
+  if (h360 < 70) return brightness < 120 ? `dark yellow (${hex})` : `yellow (${hex})`;
+  if (h360 < 150) return brightness < 100 ? `dark green (${hex})` : `green (${hex})`;
+  if (h360 < 195) return brightness < 100 ? `dark teal (${hex})` : `teal (${hex})`;
+  if (h360 < 255) return brightness < 100 ? `navy blue (${hex})` : `blue (${hex})`;
+  if (h360 < 290) return brightness < 100 ? `dark purple (${hex})` : `purple (${hex})`;
+  if (h360 < 345) return brightness < 100 ? `dark pink (${hex})` : `pink (${hex})`;
   return hex;
 }
 
