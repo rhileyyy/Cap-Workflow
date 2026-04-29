@@ -22,11 +22,11 @@ function buildAutoPrompt(s) {
   if (s.hasSideRight) sideLogos.push('RIGHT side mesh panel');
 
   const imageRefs = hasSide
-    ? 'Image 1 is the FRONT PANEL LOGO. Image 2 is the SIDE PANEL LOGO. '
-    : 'Image 1 is the FRONT PANEL LOGO. ';
+    ? 'Image 1 is the FRONT PANEL LOGO. Image 2 is also the FRONT PANEL LOGO (emphasis). Image 3 is the SIDE PANEL DESIGN. Image 4 is also the SIDE PANEL DESIGN (emphasis). '
+    : 'Image 1 is the FRONT PANEL LOGO. Image 2 is also the FRONT PANEL LOGO (emphasis). ';
 
   const sideInstruction = sideLogos.length > 0
-    ? `Image 2 is the side logo — embroider it on the ${sideLogos.join(' and ')} on the lower mesh, reproduced exactly with black outline 3D puff embroidery.`
+    ? `Image 3 is the SIDE PANEL DESIGN. Reproduce Image 3 EXACTLY on the ${sideLogos.join(' and ')} on the lower mesh — every shape, letter, colour, and detail must match Image 3 precisely. Render as raised 3D embroidery with black outline, visible stitches.`
     : '';
 
   // Rotate through distinct design directions so Try Again always produces
@@ -48,7 +48,7 @@ function buildAutoPrompt(s) {
     'High crown structured front panel — solid square face, single piece of fabric, no visible centre seam. Mesh rear panels with clearly visible woven honeycomb texture. Clean sharp seam where solid front meets mesh sides. Pre-curved brim, smooth clean edge with absolutely no stitching, no topstitching, no stitch lines visible on the brim surface at all. Squatchee button on top crown. Snapback closure at rear.',
     `Analyse Image 1 carefully. Based on the colours, style, and brand aesthetic of Image 1, choose the ideal cap colours: front panel, mesh, brim, and snapback. ${direction} Always include sewn side stripes on the mesh panels — choose the stripe count (1, 2, or 3) and stripe colour that best complements the design. Decide whether a sandwich brim would complement the look. Make choices a professional cap designer would make. Prioritise bold, clean, commercially attractive results.`,
     'All embroidery is 3D puff raised above the cap surface with real physical elevation. Black outlined embroidery on all positions. Individual thread stitches clearly visible. Each embroidered element casts a shadow onto the cap fabric beneath it.',
-    'Image 1 is the front logo. Embroider Image 1 on the crown EXACTLY as shown — same shapes, same text, same proportions, same colours. Do NOT redraw, reinvent, simplify or substitute any part of Image 1.',
+    'Image 1 is the front logo. Embroider Image 1 on the crown EXACTLY as shown — same shapes, same text, same proportions, same colours. Do NOT redraw, reinvent, simplify or substitute any part of Image 1. Image 2 confirms this — both are the same front logo.',
     sideInstruction,
     'Exclude: models, persons, hands, mannequins, multiple caps, extra brims, grey background, coloured background, busy background, props, lens flare, flat printed logos, screen printed logos, stitching on brim surface, low-profile cap, baseball cap, fitted cap, dad hat.',
   ].filter(Boolean).join(' ');
@@ -205,19 +205,24 @@ export async function POST(request) {
       const sideImg = sideFile ? await fileToBase64Cached(sideFile) : null;
 
       // Build a prompt prefix that names images explicitly
+      // With side logo: Image 1 = front, Image 2 = front emphasis,
+      //                 Image 3 = side,  Image 4 = side emphasis
+      // Without side logo: Image 1 = front, Image 2 = front emphasis
       const imageRefs = hasSide
-        ? 'Image 1 is the FRONT PANEL LOGO. Image 2 is the SIDE PANEL LOGO. '
-        : 'Image 1 is the FRONT PANEL LOGO. ';
+        ? 'Image 1 is the FRONT PANEL LOGO. Image 2 is also the FRONT PANEL LOGO (emphasis). Image 3 is the SIDE PANEL DESIGN. Image 4 is also the SIDE PANEL DESIGN (emphasis). '
+        : 'Image 1 is the FRONT PANEL LOGO. Image 2 is also the FRONT PANEL LOGO (emphasis). ';
 
-      // Push: prompt → front logo → side logo (or front again for emphasis)
+      // Push prompt first, then images in named order
       parts.push({ text: imageRefs + prompt });
+
+      // Front logo × 2 (slots 1 & 2)
+      parts.push({ inlineData: { mimeType: frontImg.mimeType, data: frontImg.data } });
       parts.push({ inlineData: { mimeType: frontImg.mimeType, data: frontImg.data } });
 
       if (sideImg) {
+        // Side design × 2 (slots 3 & 4) — same emphasis treatment as front
         parts.push({ inlineData: { mimeType: sideImg.mimeType, data: sideImg.data } });
-      } else {
-        // No side logo — duplicate front logo so the model has extra emphasis
-        parts.push({ inlineData: { mimeType: frontImg.mimeType, data: frontImg.data } });
+        parts.push({ inlineData: { mimeType: sideImg.mimeType, data: sideImg.data } });
       }
     }
 
