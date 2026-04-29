@@ -156,7 +156,8 @@ export default function CapPreview() {
   const stepTimers    = useRef([]);
 
   // Does the customer need a rear render?
-  const needsRear = !!(designs.right || designs.rear);
+  // Rear 3/4 left view shows: left side + rear panel
+  const needsRear = !!(designs.left || designs.rear);
 
   const handleFile = (slotKey, file) => {
     if (!file || !file.type.startsWith('image/')) return;
@@ -224,11 +225,13 @@ export default function CapPreview() {
     // Always send the front logo
     fd.append('design_front', designs.front.file);
     // Attach only the logos relevant to this angle
+    // Front 3/4 right → right side visible
+    // Rear 3/4 left   → left side + rear visible
     if (viewAngle === 'front') {
-      if (designs.left) fd.append('design_left', designs.left.file);
-    } else if (viewAngle === 'rear') {
       if (designs.right) fd.append('design_right', designs.right.file);
-      if (designs.rear)  fd.append('design_rear',  designs.rear.file);
+    } else if (viewAngle === 'rear') {
+      if (designs.left) fd.append('design_left', designs.left.file);
+      if (designs.rear) fd.append('design_rear',  designs.rear.file);
     }
     return fd;
   };
