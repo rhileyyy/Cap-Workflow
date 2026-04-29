@@ -12,6 +12,7 @@ import { GoogleGenAI } from '@google/genai';
 import { put } from '@vercel/blob';
 import { headers } from 'next/headers';
 import { createHash } from 'crypto';
+import sharp from 'sharp';
 import { buildProductPrompt, buildModelPrompt } from '../../../lib/prompts.js';
 
 // buildAutoPrompt defined inline here to avoid stale module cache issues
@@ -25,7 +26,7 @@ function buildAutoPrompt(s) {
     : 'Image 1 is the REFERENCE CAP to edit. Image 2 and Image 3 are both the FRONT PANEL LOGO. ';
 
   const sideInstruction = sideLogos.length > 0
-    ? `Images 4 and 5 are both the SIDE PANEL DESIGN (same design for emphasis). Reproduce it EXACTLY on the ${sideLogos.join(' and ')} in the lower mesh area, on top of any stripes — every shape, letter, colour, and detail must match precisely, including any white or light-coloured elements which must NOT be filled in or simplified. Raised 3D embroidery with visible stitches.`
+    ? `Images 4 and 5 are both the SIDE PANEL DESIGN (same design for emphasis). Reproduce it EXACTLY on the ${sideLogos.join(' and ')} in the lower mesh area, on top of any stripes — every shape, letter, colour, and detail must match precisely, including any white or light-coloured elements which must NOT be filled in or simplified. Raised 3D embroidery with visible stitches. The side design must be embroidered SMALL — it is a small accent badge, approximately 1/4 to 1/3 the size of the front panel logo. Do NOT scale it to fill the side mesh panel.`
     : '';
 
   // Colour-direction cycling — varies each Try Again
@@ -93,6 +94,36 @@ async function fileToBase64Cached(file) {
   const b64 = buffer.toString('base64');
   base64Cache.set(hash, b64);
   return { data: b64, mimeType: file.type || 'image/png' };
+}
+
+// ── Side logo scaling ──────────────────────────────────────────────────────
+// Resize the side logo to a small size before sending to Gemini.
+// When the model sees a small image relative to the cap, it naturally
+// scales the embroidery proportionally smaller — much more reliable than
+// prompt language alone. 280px cap-relative = roughly 1/4 of a 1024px cap.
+const SIDE_LOGO_MAX_PX = 280;
+const scaledCache = new Map();
+
+async function fileToBase64Scaled(file) {
+  const buffer = Buffer.from(await file.arrayBuffer());
+  const hash   = createHash('sha256').update(buffer).digest('hex').slice(0, 16);
+  const cacheKey = `scaled-${hash}`;
+  if (scaledCache.has(cacheKey)) {
+    return { data: scaledCache.get(cacheKey), mimeType: 'image/png' };
+  }
+  try {
+    const resized = await sharp(buffer)
+      .resize(SIDE_LOGO_MAX_PX, SIDE_LOGO_MAX_PX, { fit: 'inside', withoutEnlargement: true })
+      .png()
+      .toBuffer();
+    const b64 = resized.toString('base64');
+    scaledCache.set(cacheKey, b64);
+    return { data: b64, mimeType: 'image/png' };
+  } catch {
+    // If Sharp fails for any reason, fall back to the original
+    const b64 = buffer.toString('base64');
+    return { data: b64, mimeType: file.type || 'image/png' };
+  }
 }
 
 // ── Main handler ──────────────────────────────────────────────────────────
@@ -229,7 +260,8 @@ export async function POST(request) {
       }
 
       // ── Assemble parts ────────────────────────────────────────────────────
-      const sideImg = settings.hasSide ? await fileToBase64Cached(sideFile) : null;
+      // Side logo is pre-scaled to ~280px so Gemini places it proportionally small
+      const sideImg = settings.hasSide ? await fileToBase64Scaled(sideFile) : null;
 
       const imageRefs = settings.hasSide
         ? 'Image 1 is the REFERENCE CAP to edit. Image 2 and Image 3 are both the FRONT PANEL LOGO. Image 4 and Image 5 are both the SIDE PANEL DESIGN. '
