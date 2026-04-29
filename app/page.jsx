@@ -37,6 +37,7 @@ const LOADING_STEPS = [
 
 export default function CapMockupGenerator() {
   const [designs, setDesigns]         = useState({ front: null, leftSide: null, rightSide: null });
+  const [autoMode, setAutoMode]       = useState(true); // default ON
   const [colors, setColors]           = useState({ front: '#1a1a1a', mesh: '#1a1a1a', brim: '#1a1a1a', snapback: '#1a1a1a' });
   const [stripeCount, setStripeCount] = useState(0);
   const [stripeColor, setStripeColor] = useState('#ffffff');
@@ -88,17 +89,20 @@ export default function CapMockupGenerator() {
   // ── Build FormData with structured settings (NO prompt) ──────────────────
   const buildFormData = (overrides = {}) => {
     const fd = new FormData();
-    fd.append('mode',          overrides.mode       || 'product');
-    fd.append('modelKey',      overrides.modelKey   || 'male');
-    fd.append('color_front',   colors.front);
-    fd.append('color_mesh',    colors.mesh);
-    fd.append('color_brim',    colors.brim);
-    fd.append('color_snapback', colors.snapback);
-    fd.append('stripeCount',   String(stripeCount));
-    fd.append('stripeColor',   stripeColor);
-    fd.append('sandwichBrim',  String(sandwichBrim));
-    fd.append('sandwichColor', sandwichColor);
-    fd.append('design_front',  designs.front.file);
+    fd.append('mode',      overrides.mode     || (autoMode ? 'auto' : 'product'));
+    fd.append('modelKey',  overrides.modelKey || 'male');
+    // Only send colour/stripe data in manual mode — in auto mode the AI picks these
+    if (!autoMode || overrides.mode === 'model') {
+      fd.append('color_front',    colors.front);
+      fd.append('color_mesh',     colors.mesh);
+      fd.append('color_brim',     colors.brim);
+      fd.append('color_snapback', colors.snapback);
+      fd.append('stripeCount',    String(stripeCount));
+      fd.append('stripeColor',    stripeColor);
+      fd.append('sandwichBrim',   String(sandwichBrim));
+      fd.append('sandwichColor',  sandwichColor);
+    }
+    fd.append('design_front', designs.front.file);
     if (designs.leftSide)  fd.append('design_leftSide',  designs.leftSide.file);
     if (designs.rightSide) fd.append('design_rightSide', designs.rightSide.file);
     return fd;
@@ -115,9 +119,21 @@ export default function CapMockupGenerator() {
 
     try {
       const res = await fetch(API_ENDPOINT, { method: 'POST', body: buildFormData() });
-      const data = await res.json();
+      // Use text() first so a non-JSON response (HTML error page, etc.) doesn't crash
+      const text = await res.text();
+      let data = {};
+      try { data = JSON.parse(text); } catch {
+        // Backend returned HTML or plain text — surface a useful message
+        console.error('Non-JSON response from backend:', text.slice(0, 500));
+        throw new Error(res.status === 500
+          ? 'Server error — check Vercel logs for details.'
+          : res.status === 404
+          ? 'API route not found — the deployment may not have completed yet.'
+          : `Unexpected response (${res.status}). Please try again.`
+        );
+      }
       if (!res.ok) throw new Error(data.error || `Server returned ${res.status}`);
-      setResult(data); // { imageUrl, shareId }
+      setResult(data);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -229,82 +245,123 @@ export default function CapMockupGenerator() {
               </div>
             </div>
 
-            {/* Cap colours */}
-            <div className="bg-white border p-4" style={{ borderColor: '#d6d0c0' }}>
-              <div className="flex items-center justify-between mb-3">
-                <div className="text-[10px] tracking-[0.2em]" style={{ fontFamily: 'JetBrains Mono, monospace', color: '#6b6452' }}>CAP COLOURS</div>
-                <button onClick={matchAll} className="text-[10px] hover:underline" style={{ color: '#c2410c', fontFamily: 'JetBrains Mono, monospace' }}>MATCH ALL →</button>
+            {/* Auto / Manual toggle */}
+            <div className="bg-white border overflow-hidden" style={{ borderColor: '#d6d0c0' }}>
+              <div className="flex">
+                <button
+                  onClick={() => setAutoMode(true)}
+                  className="flex-1 py-3 flex items-center justify-center gap-2 text-sm transition-colors"
+                  style={{
+                    fontFamily: 'Anton, sans-serif',
+                    letterSpacing: '0.05em',
+                    backgroundColor: autoMode ? '#1a1a1a' : 'transparent',
+                    color: autoMode ? '#ffffff' : '#6b6452',
+                    borderRight: '1px solid #d6d0c0',
+                  }}>
+                  <Sparkles size={14} /> AUTO DESIGN
+                </button>
+                <button
+                  onClick={() => setAutoMode(false)}
+                  className="flex-1 py-3 flex items-center justify-center gap-2 text-sm transition-colors"
+                  style={{
+                    fontFamily: 'Anton, sans-serif',
+                    letterSpacing: '0.05em',
+                    backgroundColor: !autoMode ? '#1a1a1a' : 'transparent',
+                    color: !autoMode ? '#ffffff' : '#6b6452',
+                  }}>
+                  ⚙ CUSTOMISE
+                </button>
               </div>
-              <div className="grid grid-cols-4 gap-2">
-                {CAP_PARTS.map(part => (
-                  <div key={part.key} className="text-center">
-                    <input type="color" value={colors[part.key]} onChange={(e) => setColor(part.key, e.target.value)} className="w-full h-12 cursor-pointer" />
-                    <div className="text-[9px] tracking-[0.12em] mt-1" style={{ fontFamily: 'JetBrains Mono, monospace', color: '#6b6452' }}>
-                      {part.label.toUpperCase()}
-                    </div>
+              {autoMode && (
+                <div className="px-4 py-3" style={{ backgroundColor: '#fafaf7', borderTop: '1px solid #f0ece2' }}>
+                  <p className="text-xs leading-relaxed" style={{ color: '#6b6452' }}>
+                    We'll analyse your logo and choose the best cap colours, stripes, and construction for a professional result.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Manual customisation panel — only shown when not in auto mode */}
+            {!autoMode && (
+              <>
+                {/* Cap colours */}
+                <div className="bg-white border p-4" style={{ borderColor: '#d6d0c0' }}>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="text-[10px] tracking-[0.2em]" style={{ fontFamily: 'JetBrains Mono, monospace', color: '#6b6452' }}>CAP COLOURS</div>
+                    <button onClick={matchAll} className="text-[10px] hover:underline" style={{ color: '#c2410c', fontFamily: 'JetBrains Mono, monospace' }}>MATCH ALL →</button>
                   </div>
-                ))}
-              </div>
-              <div className="flex flex-wrap gap-1.5 mt-3 pt-3" style={{ borderTop: '1px solid #f0ece2' }}>
-                {QUICK_COLORS.map(c => {
-                  const sel = colors.front.toLowerCase() === c.toLowerCase();
-                  return (
-                    <button key={c} onClick={() => setColor('front', c)} className="w-7 h-7"
-                      style={{ backgroundColor: c, border: sel ? '2px solid #c2410c' : '1px solid rgba(0,0,0,0.15)', boxShadow: sel ? '0 0 0 1.5px #f5f1e8 inset' : 'none' }} title={c} />
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Stripes */}
-            <div className="bg-white border p-4" style={{ borderColor: '#d6d0c0' }}>
-              <div className="text-[10px] tracking-[0.2em] mb-3" style={{ fontFamily: 'JetBrains Mono, monospace', color: '#6b6452' }}>SIDE STRIPES</div>
-              <div className="flex gap-2 mb-2">
-                {STRIPE_OPTIONS.map(n => (
-                  <button key={n} onClick={() => setStripeCount(n)}
-                    className="flex-1 py-2.5 text-center text-sm"
-                    style={{
-                      fontFamily: 'Anton, sans-serif', letterSpacing: '0.03em',
-                      backgroundColor: stripeCount === n ? '#1a1a1a' : 'transparent',
-                      color: stripeCount === n ? '#f5f1e8' : '#1a1a1a',
-                      border: `1px solid ${stripeCount === n ? '#1a1a1a' : '#d6d0c0'}`,
-                    }}>
-                    {n === 0 ? 'NONE' : n}
-                  </button>
-                ))}
-              </div>
-              {stripeCount > 0 && (
-                <div className="flex items-center gap-2 pt-2" style={{ borderTop: '1px solid #f0ece2' }}>
-                  <div className="text-[9px] tracking-[0.15em]" style={{ fontFamily: 'JetBrains Mono, monospace', color: '#6b6452' }}>COLOUR</div>
-                  <input type="color" value={stripeColor} onChange={(e) => setStripeColor(e.target.value)} className="w-8 h-8" />
-                  <input type="text" value={stripeColor}
-                    onChange={(e) => { let v = e.target.value.trim(); if (!v.startsWith('#')) v = '#' + v; if (/^#[0-9a-fA-F]{0,6}$/.test(v)) setStripeColor(v); }}
-                    className="bg-transparent text-xs w-16 outline-none" style={{ fontFamily: 'JetBrains Mono, monospace' }} maxLength={7} />
+                  <div className="grid grid-cols-4 gap-2">
+                    {CAP_PARTS.map(part => (
+                      <div key={part.key} className="text-center">
+                        <input type="color" value={colors[part.key]} onChange={(e) => setColor(part.key, e.target.value)} className="w-full h-12 cursor-pointer" />
+                        <div className="text-[9px] tracking-[0.12em] mt-1" style={{ fontFamily: 'JetBrains Mono, monospace', color: '#6b6452' }}>
+                          {part.label.toUpperCase()}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 mt-3 pt-3" style={{ borderTop: '1px solid #f0ece2' }}>
+                    {QUICK_COLORS.map(c => {
+                      const sel = colors.front.toLowerCase() === c.toLowerCase();
+                      return (
+                        <button key={c} onClick={() => setColor('front', c)} className="w-7 h-7"
+                          style={{ backgroundColor: c, border: sel ? '2px solid #c2410c' : '1px solid rgba(0,0,0,0.15)', boxShadow: sel ? '0 0 0 1.5px #f5f1e8 inset' : 'none' }} title={c} />
+                      );
+                    })}
+                  </div>
                 </div>
-              )}
-            </div>
 
-            {/* Sandwich brim */}
-            <div className="bg-white border p-4" style={{ borderColor: '#d6d0c0' }}>
-              <div className="flex items-center justify-between">
-                <div className="text-[10px] tracking-[0.2em]" style={{ fontFamily: 'JetBrains Mono, monospace', color: '#6b6452' }}>SANDWICH BRIM</div>
-                <label className="flex items-center gap-2 cursor-pointer select-none">
-                  <span className="text-[10px]" style={{ fontFamily: 'JetBrains Mono, monospace', color: sandwichBrim ? '#c2410c' : '#6b6452' }}>
-                    {sandwichBrim ? 'ON' : 'OFF'}
-                  </span>
-                  <input type="checkbox" checked={sandwichBrim} onChange={(e) => setSandwichBrim(e.target.checked)} />
-                </label>
-              </div>
-              {sandwichBrim && (
-                <div className="flex items-center gap-2 mt-3 pt-2" style={{ borderTop: '1px solid #f0ece2' }}>
-                  <div className="text-[9px] tracking-[0.15em]" style={{ fontFamily: 'JetBrains Mono, monospace', color: '#6b6452' }}>UNDERSIDE</div>
-                  <input type="color" value={sandwichColor} onChange={(e) => setSandwichColor(e.target.value)} className="w-8 h-8" />
-                  <input type="text" value={sandwichColor}
-                    onChange={(e) => { let v = e.target.value.trim(); if (!v.startsWith('#')) v = '#' + v; if (/^#[0-9a-fA-F]{0,6}$/.test(v)) setSandwichColor(v); }}
-                    className="bg-transparent text-xs w-16 outline-none" style={{ fontFamily: 'JetBrains Mono, monospace' }} maxLength={7} />
+                {/* Stripes */}
+                <div className="bg-white border p-4" style={{ borderColor: '#d6d0c0' }}>
+                  <div className="text-[10px] tracking-[0.2em] mb-3" style={{ fontFamily: 'JetBrains Mono, monospace', color: '#6b6452' }}>SIDE STRIPES</div>
+                  <div className="flex gap-2 mb-2">
+                    {STRIPE_OPTIONS.map(n => (
+                      <button key={n} onClick={() => setStripeCount(n)}
+                        className="flex-1 py-2.5 text-center text-sm"
+                        style={{
+                          fontFamily: 'Anton, sans-serif', letterSpacing: '0.03em',
+                          backgroundColor: stripeCount === n ? '#1a1a1a' : 'transparent',
+                          color: stripeCount === n ? '#f5f1e8' : '#1a1a1a',
+                          border: `1px solid ${stripeCount === n ? '#1a1a1a' : '#d6d0c0'}`,
+                        }}>
+                        {n === 0 ? 'NONE' : n}
+                      </button>
+                    ))}
+                  </div>
+                  {stripeCount > 0 && (
+                    <div className="flex items-center gap-2 pt-2" style={{ borderTop: '1px solid #f0ece2' }}>
+                      <div className="text-[9px] tracking-[0.15em]" style={{ fontFamily: 'JetBrains Mono, monospace', color: '#6b6452' }}>COLOUR</div>
+                      <input type="color" value={stripeColor} onChange={(e) => setStripeColor(e.target.value)} className="w-8 h-8" />
+                      <input type="text" value={stripeColor}
+                        onChange={(e) => { let v = e.target.value.trim(); if (!v.startsWith('#')) v = '#' + v; if (/^#[0-9a-fA-F]{0,6}$/.test(v)) setStripeColor(v); }}
+                        className="bg-transparent text-xs w-16 outline-none" style={{ fontFamily: 'JetBrains Mono, monospace' }} maxLength={7} />
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
+
+                {/* Sandwich brim */}
+                <div className="bg-white border p-4" style={{ borderColor: '#d6d0c0' }}>
+                  <div className="flex items-center justify-between">
+                    <div className="text-[10px] tracking-[0.2em]" style={{ fontFamily: 'JetBrains Mono, monospace', color: '#6b6452' }}>SANDWICH BRIM</div>
+                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                      <span className="text-[10px]" style={{ fontFamily: 'JetBrains Mono, monospace', color: sandwichBrim ? '#c2410c' : '#6b6452' }}>
+                        {sandwichBrim ? 'ON' : 'OFF'}
+                      </span>
+                      <input type="checkbox" checked={sandwichBrim} onChange={(e) => setSandwichBrim(e.target.checked)} />
+                    </label>
+                  </div>
+                  {sandwichBrim && (
+                    <div className="flex items-center gap-2 mt-3 pt-2" style={{ borderTop: '1px solid #f0ece2' }}>
+                      <div className="text-[9px] tracking-[0.15em]" style={{ fontFamily: 'JetBrains Mono, monospace', color: '#6b6452' }}>UNDERSIDE</div>
+                      <input type="color" value={sandwichColor} onChange={(e) => setSandwichColor(e.target.value)} className="w-8 h-8" />
+                      <input type="text" value={sandwichColor}
+                        onChange={(e) => { let v = e.target.value.trim(); if (!v.startsWith('#')) v = '#' + v; if (/^#[0-9a-fA-F]{0,6}$/.test(v)) setSandwichColor(v); }}
+                        className="bg-transparent text-xs w-16 outline-none" style={{ fontFamily: 'JetBrains Mono, monospace' }} maxLength={7} />
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
 
             {/* Sticky CTA */}
             <div className="sticky bottom-4 z-10">
