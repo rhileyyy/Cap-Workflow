@@ -12,7 +12,35 @@ import { GoogleGenAI } from '@google/genai';
 import { put } from '@vercel/blob';
 import { headers } from 'next/headers';
 import { createHash } from 'crypto';
-import { buildProductPrompt, buildModelPrompt, buildAutoPrompt } from '../../../lib/prompts.js';
+import { buildProductPrompt, buildModelPrompt } from '../../../lib/prompts.js';
+
+// buildAutoPrompt defined inline here to avoid stale module cache issues
+function buildAutoPrompt(s) {
+  const hasSide = s.hasSideLeft || s.hasSideRight;
+  const sideLogos = [];
+  if (s.hasSideLeft)  sideLogos.push('LEFT side mesh panel');
+  if (s.hasSideRight) sideLogos.push('RIGHT side mesh panel');
+
+  const imageRefs = hasSide
+    ? 'Image 1 is the FRONT PANEL LOGO. Image 2 is the SIDE PANEL LOGO. '
+    : 'Image 1 is the FRONT PANEL LOGO. ';
+
+  const sideInstruction = sideLogos.length > 0
+    ? `Image 2 is the side logo — embroider it on the ${sideLogos.join(' and ')} on the lower mesh, reproduced exactly with black outline 3D puff embroidery.`
+    : '';
+
+  const parts = [
+    imageRefs + 'Realistic professional 3/4 view product mock of a 5 panel trucker cap, subject rotated 45 degrees to the left. PURE WHITE background — solid bright white (#ffffff), not grey, not off-white. Soft natural shadow directly beneath the cap only. No models, no hands, no props.',
+    'High crown structured front panel — solid square face, single piece of fabric, no visible centre seam. Mesh rear panels with clearly visible woven honeycomb texture. Clean sharp seam where solid front meets mesh sides. Pre-curved brim, smooth clean edge with absolutely no stitching, no topstitching, no stitch lines visible on the brim surface at all. Squatchee button on top crown. Snapback closure at rear.',
+    'Analyse Image 1 carefully. Based on the colours, style, and brand aesthetic of Image 1, choose the ideal cap colours: front panel, mesh, brim, and snapback. Decide whether side stripes would enhance the design — if yes, choose count (1-3) and colour. Decide whether a sandwich brim would complement the look. Make choices a professional cap designer would make. Prioritise bold, clean, commercially attractive results.',
+    'All embroidery is 3D puff raised above the cap surface with real physical elevation. Black outlined embroidery on all positions. Individual thread stitches clearly visible. Each embroidered element casts a shadow onto the cap fabric beneath it.',
+    'Image 1 is the front logo. Embroider Image 1 on the crown EXACTLY as shown — same shapes, same text, same proportions, same colours. Do NOT redraw, reinvent, simplify or substitute any part of Image 1.',
+    sideInstruction,
+    'Exclude: models, persons, hands, mannequins, multiple caps, extra brims, grey background, coloured background, busy background, props, lens flare, flat printed logos, screen printed logos, stitching on brim surface, low-profile cap, baseball cap, fitted cap, dad hat.',
+  ].filter(Boolean).join(' ');
+
+  return parts;
+}
 
 export const maxDuration = 60;
 
@@ -253,4 +281,3 @@ export async function POST(request) {
 function jsonError(message, status) {
   return Response.json({ error: message }, { status });
 }
-
