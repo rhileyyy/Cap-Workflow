@@ -64,6 +64,15 @@ export default function CapMockupGenerator() {
   const setColor      = (part, value) => setColors(prev => ({ ...prev, [part]: value }));
   const matchAll = () => setColors({ front: colors.front, mesh: colors.front, brim: colors.front });
 
+  // Returns true if a hex colour is light enough to need dark text
+  const isLight = (hex) => {
+    const h = hex.replace('#', '');
+    const r = parseInt(h.slice(0, 2), 16);
+    const g = parseInt(h.slice(2, 4), 16);
+    const b = parseInt(h.slice(4, 6), 16);
+    return (r * 299 + g * 587 + b * 114) / 1000 > 140;
+  };
+
   // ── Animated loading steps ─────────────────────────────────────────────
   const startLoadingAnimation = () => {
     stepTimers.current.forEach(clearTimeout);
@@ -282,15 +291,41 @@ export default function CapMockupGenerator() {
                     <div className="text-[10px] tracking-[0.2em]" style={{ fontFamily: 'JetBrains Mono, monospace', color: '#6b6452' }}>CAP COLOURS</div>
                     <button onClick={matchAll} className="text-[10px] hover:underline" style={{ color: '#c2410c', fontFamily: 'JetBrains Mono, monospace' }}>MATCH ALL →</button>
                   </div>
-                  <div className="grid grid-cols-4 gap-2">
-                    {CAP_PARTS.map(part => (
-                      <div key={part.key} className="text-center">
-                        <input type="color" value={colors[part.key]} onChange={(e) => setColor(part.key, e.target.value)} className="w-full h-12 cursor-pointer" />
-                        <div className="text-[9px] tracking-[0.12em] mt-1" style={{ fontFamily: 'JetBrains Mono, monospace', color: '#6b6452' }}>
-                          {part.label.toUpperCase()}
+                  <div className="grid grid-cols-3 gap-2">
+                    {CAP_PARTS.map(part => {
+                      const others = CAP_PARTS.filter(p => p.key !== part.key);
+                      return (
+                        <div key={part.key} className="border p-2.5" style={{ borderColor: '#f0ece2' }}>
+                          <input
+                            type="color"
+                            value={colors[part.key]}
+                            onChange={(e) => setColor(part.key, e.target.value)}
+                            className="w-full h-10 cursor-pointer"
+                          />
+                          <div className="text-[9px] tracking-[0.12em] mt-1.5 mb-2" style={{ fontFamily: 'JetBrains Mono, monospace', color: '#6b6452' }}>
+                            {part.label.toUpperCase()}
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <span className="text-[8px]" style={{ fontFamily: 'JetBrains Mono, monospace', color: '#c4bfb0' }}>→</span>
+                            {others.map(other => (
+                              <button
+                                key={other.key}
+                                onClick={() => setColor(other.key, colors[part.key])}
+                                title={`Copy to ${other.label}`}
+                                className="flex-1 py-0.5 text-center text-[8px] tracking-wide hover:opacity-80 transition-opacity"
+                                style={{
+                                  fontFamily: 'JetBrains Mono, monospace',
+                                  backgroundColor: colors[other.key],
+                                  color: isLight(colors[other.key]) ? '#1a1a1a' : '#ffffff',
+                                  border: '1px solid rgba(0,0,0,0.1)',
+                                }}>
+                                {other.label.toUpperCase()}
+                              </button>
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                   <div style={{ borderTop: '1px solid #f0ece2' }} className="mt-3 pt-3">
                     <div className="text-[9px] tracking-[0.15em] mb-2" style={{ fontFamily: 'JetBrains Mono, monospace', color: '#a39d8d' }}>
