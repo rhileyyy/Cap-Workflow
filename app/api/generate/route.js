@@ -52,8 +52,8 @@ function buildAutoPrompt(s) {
     imageRefs + 'Edit Image 1, which is a photograph of a blank grey trucker cap. Keep the cap shape, construction, angle, lighting, mesh texture, brim shape, and stripe placement EXACTLY as they are in Image 1. Only make the colour and embroidery changes described below.',
     'Preserve from Image 1 exactly: the crown shape, front panel, mesh panels, brim curve, squatchee button, snapback closure, and any stripe positions. Do not move, add, or remove stripes. No topstitching on the brim.',
     `Analyse the logo in Images 2 and 3. Based on its colours, style, and brand aesthetic, choose the ideal cap colours: front panel, mesh, and brim. ${direction} ${stripeNote} Decide whether a sandwich brim would complement the look. Make choices a professional cap designer would make.`,
-    'All logos rendered as 3D high quality embroidery raised above the cap surface. Black outlined embroidery on all positions. Individual thread stitches clearly visible.',
-    'Images 2 and 3 are the front logo. Embroider it on the centre of the front panel EXACTLY as shown — same shapes, same text, same proportions, same colours. Do NOT redraw, simplify, or substitute any part.',
+    'All logos rendered as 3D puff embroidery raised above the cap surface. Black outlined embroidery on all positions. Individual thread stitches clearly visible.',
+    'Images 2 and 3 are the front logo. Embroider it on the centre of the front panel EXACTLY as shown — same shapes, same text, same proportions, same colours. The embroidery should occupy approximately 55–65% of the front panel width, leaving clear breathing room on all sides. Do NOT redraw, simplify, or substitute any part.',
     sideInstruction,
     'Do not change the cap shape or construction. Do not move or add stripes. Do not add stripes to the brim. Do not add topstitching to the brim. Do not add a model or person. Do not change the background.',
   ].filter(Boolean).join(' ');
@@ -111,33 +111,35 @@ function buildCacheKey(mode, frontHash, sideHash, effectiveSettings) {
           stripeCount, stripeColor, sandwichBrim, sandwichColor].join(':');
 }
 
-// ── Side logo scaling ──────────────────────────────────────────────────────
-// Resize the side logo to a small size before sending to Gemini.
-// When the model sees a small image relative to the cap, it naturally
-// scales the embroidery proportionally smaller — much more reliable than
-// prompt language alone. 280px cap-relative = roughly 1/4 of a 1024px cap.
-const SIDE_LOGO_MAX_PX = 280;
+// ── Logo scaling ───────────────────────────────────────────────────────────
+// Resize logos before sending to Gemini. The model reads relative image
+// dimensions as a placement signal — smaller input = smaller embroidery output.
+//
+//   Front logo: 420px  → places as ~55-65% of front panel width
+//   Side logo:  280px  → places as a small accent badge
+//
+// Both are proportionally smaller than the 1024px reference cap so the
+// model naturally scales the embroidery to match.
 const scaledCache = new Map();
 
-async function fileToBase64Scaled(file) {
-  const buffer = Buffer.from(await file.arrayBuffer());
-  const hash   = createHash('sha256').update(buffer).digest('hex').slice(0, 16);
-  const cacheKey = `scaled-${hash}`;
+async function fileToBase64Scaled(file, maxPx = 280) {
+  const buffer   = Buffer.from(await file.arrayBuffer());
+  const hash     = createHash('sha256').update(buffer).digest('hex').slice(0, 16);
+  const cacheKey = `scaled-${maxPx}-${hash}`;
   if (scaledCache.has(cacheKey)) {
-    return { data: scaledCache.get(cacheKey), mimeType: 'image/png' };
+    return { data: scaledCache.get(cacheKey), mimeType: 'image/png', hash };
   }
   try {
     const resized = await sharp(buffer)
-      .resize(SIDE_LOGO_MAX_PX, SIDE_LOGO_MAX_PX, { fit: 'inside', withoutEnlargement: true })
+      .resize(maxPx, maxPx, { fit: 'inside', withoutEnlargement: true })
       .png()
       .toBuffer();
     const b64 = resized.toString('base64');
     scaledCache.set(cacheKey, b64);
-    return { data: b64, mimeType: 'image/png' };
+    return { data: b64, mimeType: 'image/png', hash };
   } catch {
-    // If Sharp fails for any reason, fall back to the original
     const b64 = buffer.toString('base64');
-    return { data: b64, mimeType: file.type || 'image/png' };
+    return { data: b64, mimeType: file.type || 'image/png', hash };
   }
 }
 
@@ -200,9 +202,10 @@ export async function POST(request) {
                  : mode === 'auto'  ? buildAutoPrompt(effectiveSettings)
                  :                    buildProductPrompt(effectiveSettings);
 
-    // Convert logo files to base64 (with in-memory cache for re-generates)
-    const frontImg = await fileToBase64Cached(frontFile);
-    const sideImgForKey = settings.hasSide ? await fileToBase64Scaled(sideFile) : null;
+    // Scale both logos before sending — smaller input = smaller embroidery output
+    // Front: 420px = ~55-65% of front panel. Side: 280px = small accent badge.
+    const frontImg    = await fileToBase64Scaled(frontFile, 420);
+    const sideImgForKey = settings.hasSide ? await fileToBase64Scaled(sideFile, 280) : null;
 
     // ── Result cache check ────────────────────────────────────────────────────
     // Skip generation entirely if we've already rendered this exact configuration.
@@ -300,23 +303,19 @@ export async function POST(request) {
     }
 
     // ── Call Nano Banana 2 ─────────────────────────────────────────────────
-    // Synchronous — image comes back in this single request, no polling needed.
     const ai = new GoogleGenAI({ apiKey: process.env.GOOGLE_API_KEY });
 
     const response = await ai.models.generateContent({
       model: 'gemini-3.1-flash-image-preview',
       contents: [{ role: 'user', parts }],
       config: {
-        responseModalities: ['IMAGE', 'TEXT'],
+        responseModalities: ['TEXT', 'IMAGE'],
         imageConfig: {
           aspectRatio: '1:1',
-          imageSize: '1k', // 512px saves 33% vs 1K — fine for a preview tool
+          imageSize: '512',
         },
-        thinkingConfig: {
-          // 'minimal' = lowest latency while still using reasoning
-          // Change to 'high' for higher quality at the cost of more wait time
-          thinkingLevel: 'minimal',
-        },
+        // Note: thinkingConfig removed — conflicts with imageConfig in SDK 1.x
+        // The model still uses thinking internally at its default level
       },
     });
 
