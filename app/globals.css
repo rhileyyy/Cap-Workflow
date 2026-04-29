@@ -2,94 +2,120 @@
 @tailwind components;
 @tailwind utilities;
 
-* {
-  box-sizing: border-box;
-}
+* { box-sizing: border-box; margin: 0; padding: 0; }
 
 html, body {
-  margin: 0;
-  padding: 0;
   background: #f5f1e8;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Subtle paper grain on the page background */
+/* Paper grain */
 .grain {
-  background-image: radial-gradient(circle at 1px 1px, rgba(0, 0, 0, 0.03) 1px, transparent 0);
+  background-image: radial-gradient(circle at 1px 1px, rgba(0,0,0,0.025) 1px, transparent 0);
   background-size: 4px 4px;
 }
 
-/* ── Focus rings — consistent across all interactive elements ─────────── */
+/* ── Section label ─────────────────────────────────────────── */
+.section-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.28em;
+  color: #a39d8d;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+}
+
+/* ── Card wrapper ──────────────────────────────────────────── */
+.card {
+  background: #fff;
+  border: 1px solid #e8e1cf;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+/* ── Upload tile ───────────────────────────────────────────── */
+.upload-tile {
+  transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+}
+.upload-tile.drag-over {
+  background-color: #fef6f0 !important;
+  border-color: #c2410c !important;
+  box-shadow: 0 0 0 3px rgba(194, 65, 12, 0.1);
+}
+.upload-tile:hover {
+  box-shadow: 0 1px 6px rgba(0,0,0,0.06);
+}
+
+/* ── Swatch buttons ────────────────────────────────────────── */
+.swatch-btn:hover {
+  transform: scale(1.12) !important;
+}
+.swatch-btn:active {
+  transform: scale(0.96) !important;
+}
+
+/* ── Hover helpers ─────────────────────────────────────────── */
+.hover-subtle:hover {
+  background-color: rgba(0,0,0,0.035) !important;
+}
+.hover-danger:hover {
+  background-color: rgba(194, 65, 12, 0.08) !important;
+}
+
+/* ── CTA button ────────────────────────────────────────────── */
+.cta-button {
+  border-radius: 6px;
+  border: none;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.12), 0 1px 3px rgba(0,0,0,0.08);
+  transition: transform 0.1s ease, box-shadow 0.1s ease, background-color 0.2s ease;
+}
+.cta-button:not(:disabled):hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(0,0,0,0.15), 0 2px 5px rgba(0,0,0,0.1);
+}
+.cta-button:not(:disabled):active {
+  transform: translateY(0);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+}
+
+/* ── Focus rings ───────────────────────────────────────────── */
 button:focus-visible,
 input:focus-visible,
-select:focus-visible,
-a:focus-visible,
-label:focus-visible {
+a:focus-visible {
   outline: 2px solid #c2410c;
   outline-offset: 2px;
 }
 
-/* ── Native colour input — make it look like a clean swatch ──────────── */
-/* This kills the browser's default chrome around the colour swatch so the
-   visible element is just a clean rectangle of the chosen colour. */
+/* ── Colour input ──────────────────────────────────────────── */
 input[type="color"] {
   -webkit-appearance: none;
-  -moz-appearance: none;
   appearance: none;
   padding: 0;
   border: 2px solid #1a1a1a;
   cursor: pointer;
   background: transparent;
-  border-radius: 0;
-  transition: transform 0.12s ease, box-shadow 0.12s ease;
+  border-radius: 4px;
+  transition: transform 0.12s ease;
 }
-input[type="color"]:hover {
-  transform: scale(1.05);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
-}
-input[type="color"]::-webkit-color-swatch-wrapper {
-  padding: 0;
-}
-input[type="color"]::-webkit-color-swatch {
-  border: none;
-  border-radius: 0;
-}
-input[type="color"]::-moz-color-swatch {
-  border: none;
-  border-radius: 0;
-}
+input[type="color"]:hover { transform: scale(1.05); }
+input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+input[type="color"]::-webkit-color-swatch { border: none; border-radius: 2px; }
+input[type="color"]::-moz-color-swatch { border: none; border-radius: 2px; }
 
-/* ── Text inputs — consistent typography ─────────────────────────────── */
-input[type="text"],
-input[type="email"] {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.875rem;
-}
-input[type="text"]::placeholder,
-input[type="email"]::placeholder {
-  color: #a39d8d;
-}
-
-/* ── Select dropdown — consistent across browsers ────────────────────── */
-select {
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  appearance: none;
-}
-
-/* ── Checkbox — clean square style ───────────────────────────────────── */
+/* ── Checkbox ──────────────────────────────────────────────── */
 input[type="checkbox"] {
   -webkit-appearance: none;
-  -moz-appearance: none;
   appearance: none;
-  width: 1.25rem;
-  height: 1.25rem;
-  border: 2px solid #1a1a1a;
-  background: #ffffff;
+  width: 1.2rem;
+  height: 1.2rem;
+  border: 2px solid #c4bfb0;
+  background: #fff;
   cursor: pointer;
   position: relative;
-  transition: background 0.12s ease;
+  border-radius: 3px;
+  flex-shrink: 0;
+  transition: background 0.12s ease, border-color 0.12s ease;
 }
 input[type="checkbox"]:checked {
   background: #c2410c;
@@ -98,32 +124,37 @@ input[type="checkbox"]:checked {
 input[type="checkbox"]:checked::after {
   content: '';
   position: absolute;
-  left: 5px;
-  top: 1px;
-  width: 5px;
-  height: 10px;
+  left: 4px; top: 1px;
+  width: 5px; height: 9px;
   border: solid white;
   border-width: 0 2px 2px 0;
   transform: rotate(45deg);
 }
 
-/* ── Buttons — tighter feel with smooth transitions ──────────────────── */
+/* ── All buttons base ──────────────────────────────────────── */
 button {
-  transition: transform 0.08s ease, opacity 0.12s ease, background-color 0.12s ease, color 0.12s ease;
+  transition: transform 0.08s ease, opacity 0.12s ease, background-color 0.15s ease, color 0.15s ease;
 }
 button:not(:disabled):active {
   transform: translateY(1px);
 }
-
-/* ── File-drop hover affordance ──────────────────────────────────────── */
-.upload-tile {
-  transition: background-color 0.15s ease, border-color 0.15s ease;
+button:disabled {
+  cursor: not-allowed;
 }
 
-/* ── Subtle separator helper ─────────────────────────────────────────── */
-.divider {
-  height: 1px;
-  background: #d6d0c0;
-  border: 0;
-  margin: 0;
+/* ── Scrollbar — subtle ────────────────────────────────────── */
+aside::-webkit-scrollbar { width: 4px; }
+aside::-webkit-scrollbar-track { background: transparent; }
+aside::-webkit-scrollbar-thumb { background: #d6d0c0; border-radius: 2px; }
+aside::-webkit-scrollbar-thumb:hover { background: #a39d8d; }
+
+/* ── Mobile — stack layout ─────────────────────────────────── */
+@media (max-width: 1023px) {
+  aside {
+    border-right: none !important;
+    border-bottom: 1px solid #d6d0c0;
+  }
+  main {
+    padding: 24px 16px !important;
+  }
 }
