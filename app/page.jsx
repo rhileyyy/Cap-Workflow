@@ -56,7 +56,26 @@ export default function CapMockupGenerator() {
     if (!file) return;
     if (!file.type.startsWith('image/')) { alert('Please upload an image file.'); return; }
     const reader = new FileReader();
-    reader.onload = (e) => setDesigns(prev => ({ ...prev, [sideKey]: { file, preview: e.target.result } }));
+    reader.onload = (e) => {
+      // Check image dimensions before accepting
+      const img = new Image();
+      img.onload = () => {
+        const minPx = sideKey === 'front' ? 400 : 200;
+        if (img.width < minPx || img.height < minPx) {
+          const part = sideKey === 'front' ? 'front panel' : 'side panel';
+          const rec  = sideKey === 'front' ? '500px' : '300px';
+          // Warn but still allow — customer might not have better quality
+          console.warn(`Low resolution ${part} logo: ${img.width}×${img.height}px`);
+          setDesigns(prev => ({
+            ...prev,
+            [sideKey]: { file, preview: e.target.result, lowRes: true, dims: `${img.width}×${img.height}` }
+          }));
+        } else {
+          setDesigns(prev => ({ ...prev, [sideKey]: { file, preview: e.target.result, lowRes: false } }));
+        }
+      };
+      img.src = e.target.result;
+    };
     reader.readAsDataURL(file);
   };
   const clearDesign   = (sideKey) => setDesigns(prev => ({ ...prev, [sideKey]: null }));
@@ -216,14 +235,21 @@ export default function CapMockupGenerator() {
                         onChange={(e) => handleFile(side.key, e.target.files?.[0])} />
                       {design ? (
                         <>
-                          <div className="w-12 h-12 flex items-center justify-center flex-shrink-0 bg-neutral-50 border" style={{ borderColor: '#e8e1cf' }}>
+                          <div className="w-12 h-12 flex items-center justify-center flex-shrink-0 bg-neutral-50 border"
+                            style={{ borderColor: design.lowRes ? '#c97a2a' : '#e8e1cf' }}>
                             <img src={design.preview} alt="" className="max-w-full max-h-full object-contain" />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <div className="text-[10px] tracking-[0.15em] flex items-center gap-1" style={{ fontFamily: 'JetBrains Mono, monospace', color: '#2d5a2b' }}>
-                              {side.label.toUpperCase()} <Check size={10} strokeWidth={3} />
+                            <div className="text-[10px] tracking-[0.15em] flex items-center gap-1"
+                              style={{ fontFamily: 'JetBrains Mono, monospace', color: design.lowRes ? '#c97a2a' : '#2d5a2b' }}>
+                              {side.label.toUpperCase()} {design.lowRes ? '⚠ LOW RES' : <Check size={10} strokeWidth={3} />}
                             </div>
                             <div className="text-xs truncate mt-0.5" style={{ fontFamily: 'Anton, sans-serif' }}>{design.file.name}</div>
+                            {design.lowRes && (
+                              <div className="text-[9px] mt-0.5" style={{ color: '#c97a2a', fontFamily: 'JetBrains Mono, monospace' }}>
+                                {design.dims} — result may be blurry. Upload a higher resolution file for best results.
+                              </div>
+                            )}
                           </div>
                           <button onClick={(e) => { e.stopPropagation(); clearDesign(side.key); }}
                             className="text-[10px] hover:underline flex-shrink-0" style={{ color: '#c2410c', fontFamily: 'JetBrains Mono, monospace' }}>✕</button>
