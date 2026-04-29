@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Upload, Check, Loader2, RefreshCw, Sparkles, Users, Download, Copy, CheckCheck } from 'lucide-react';
+import { Upload, Check, Loader2, RefreshCw, Sparkles, Users } from 'lucide-react';
 
 const API_ENDPOINT = '/api/generate';
 
@@ -51,7 +51,6 @@ export default function CapMockupGenerator() {
   const [generatingModels, setGeneratingModels] = useState(false);
   const [modelProgress, setModelProgress]       = useState('');
   const [modelShots, setModelShots]             = useState(null);
-  const [copied, setCopied]                     = useState(false);
   const fileInputRefs = useRef({});
   const stepTimers    = useRef([]);
 
@@ -149,16 +148,18 @@ export default function CapMockupGenerator() {
 
   // ── Model shots ───────────────────────────────────────────────────────
   const handleModelShots = async () => {
-    if (!designs.front) return;
+    if (!designs.front || !result?.imageUrl) return;
     setGeneratingModels(true);
     setModelShots(null);
-    setModelProgress('Creating 3 lifestyle previews…');
+    setModelProgress('Creating lifestyle previews…');
 
     try {
       const modelKeys = ['male', 'female', 'child'];
       const labels    = ['Men', 'Women', 'Kids'];
       const results   = await Promise.all(modelKeys.map(async (key, i) => {
         const fd = buildFormData({ mode: 'model', modelKey: key });
+        // Send the already-rendered cap image so the model uses the exact cap
+        fd.append('cap_image_url', result.imageUrl);
         const res = await fetch(API_ENDPOINT, { method: 'POST', body: fd });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) return { key, label: labels[i], error: data.error || 'Failed' };
@@ -171,15 +172,6 @@ export default function CapMockupGenerator() {
       setGeneratingModels(false);
       setModelProgress('');
     }
-  };
-
-  // ── Copy share link ───────────────────────────────────────────────────
-  const copyShareLink = (shareId) => {
-    if (!shareId) return;
-    const origin = window.location.origin;
-    navigator.clipboard.writeText(`${origin}/share/${shareId}`);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2500);
   };
 
   // ── Render ─────────────────────────────────────────────────────────────
@@ -449,31 +441,19 @@ export default function CapMockupGenerator() {
                     <img src={result.imageUrl} alt="Cap preview" className="w-full block" />
                   </div>
 
-                  {/* Action buttons */}
-                  <div className="flex gap-2 flex-wrap">
-                    <button onClick={handleGenerate} className="px-4 py-2 border flex items-center gap-1.5 text-sm"
+                  {/* Action buttons — TRY AGAIN + VIEW CAP (share page) */}
+                  <div className="flex gap-2">
+                    <button onClick={handleGenerate}
+                      className="flex-1 py-2.5 border flex items-center justify-center gap-1.5 text-sm"
                       style={{ borderColor: '#1a1a1a', fontFamily: 'Anton, sans-serif', letterSpacing: '0.03em' }}>
                       <RefreshCw size={14} /> TRY AGAIN
                     </button>
-                    <a href={result.imageUrl} download target="_blank" rel="noopener noreferrer"
-                      className="px-4 py-2 flex items-center gap-1.5 text-sm"
-                      style={{ backgroundColor: '#1a1a1a', color: '#f5f1e8', fontFamily: 'Anton, sans-serif', letterSpacing: '0.03em', textDecoration: 'none' }}>
-                      <Download size={14} /> DOWNLOAD
-                    </a>
                     {result.shareId && (
-                      <button onClick={() => copyShareLink(result.shareId)}
-                        className="px-4 py-2 flex items-center gap-1.5 text-sm"
-                        style={{
-                          backgroundColor: copied ? '#2d5a2b' : '#f5f1e8',
-                          color: copied ? '#fff' : '#1a1a1a',
-                          border: `1px solid ${copied ? '#2d5a2b' : '#d6d0c0'}`,
-                          fontFamily: 'Anton, sans-serif',
-                          letterSpacing: '0.03em',
-                          transition: 'all 0.2s',
-                        }}>
-                        {copied ? <CheckCheck size={14} /> : <Copy size={14} />}
-                        {copied ? 'COPIED!' : 'COPY LINK'}
-                      </button>
+                      <a href={`/share/${result.shareId}`} target="_blank" rel="noopener noreferrer"
+                        className="flex-1 py-2.5 flex items-center justify-center gap-1.5 text-sm"
+                        style={{ backgroundColor: '#c2410c', color: '#fff', fontFamily: 'Anton, sans-serif', letterSpacing: '0.03em', textDecoration: 'none' }}>
+                        VIEW YOUR CAP →
+                      </a>
                     )}
                   </div>
 
@@ -491,7 +471,7 @@ export default function CapMockupGenerator() {
                       <div className="text-center py-6">
                         <Loader2 size={24} className="animate-spin mx-auto mb-3" style={{ color: '#c2410c' }} />
                         <p className="text-xs" style={{ fontFamily: 'JetBrains Mono, monospace' }}>{modelProgress}</p>
-                        <p className="text-xs mt-1" style={{ color: '#6b6452' }}>Creating 3 lifestyle previews (30-45 sec)</p>
+                        <p className="text-xs mt-1" style={{ color: '#6b6452' }}>Placing your cap on models (30-45 sec)</p>
                       </div>
                     )}
 
@@ -515,26 +495,12 @@ export default function CapMockupGenerator() {
                             </div>
                           ))}
                         </div>
-                        <div className="flex gap-2 flex-wrap">
-                          <button onClick={handleModelShots} className="px-3 py-1.5 border flex items-center gap-1 text-xs"
-                            style={{ borderColor: '#1a1a1a', fontFamily: 'Anton, sans-serif', letterSpacing: '0.03em' }}>
-                            <RefreshCw size={12} /> RETRY
-                          </button>
-                          {modelShots.filter(s => s.imageUrl).map(shot => (
-                            <a key={shot.key} href={shot.imageUrl} download target="_blank" rel="noopener noreferrer"
-                              className="px-3 py-1.5 flex items-center gap-1 text-xs"
-                              style={{ backgroundColor: '#1a1a1a', color: '#f5f1e8', fontFamily: 'JetBrains Mono, monospace', textDecoration: 'none' }}>
-                              {shot.label.toUpperCase()}
-                            </a>
-                          ))}
-                          {modelShots.filter(s => s.shareId).map(shot => (
-                            <button key={`share-${shot.key}`} onClick={() => copyShareLink(shot.shareId)}
-                              className="px-3 py-1.5 flex items-center gap-1 text-xs"
-                              style={{ border: '1px solid #d6d0c0', fontFamily: 'JetBrains Mono, monospace', color: '#6b6452' }}>
-                              <Copy size={11} /> {shot.label.toUpperCase()}
-                            </button>
-                          ))}
-                        </div>
+                        {/* Single retry button only */}
+                        <button onClick={handleModelShots}
+                          className="w-full py-2.5 border flex items-center justify-center gap-1.5 text-sm"
+                          style={{ borderColor: '#1a1a1a', fontFamily: 'Anton, sans-serif', letterSpacing: '0.03em' }}>
+                          <RefreshCw size={14} /> TRY AGAIN
+                        </button>
                       </div>
                     )}
                   </div>
