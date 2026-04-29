@@ -46,9 +46,8 @@ export default function CapMockupGenerator() {
   const [loadingStep, setLoadingStep]     = useState(0);
   const [result, setResult]               = useState(null);
   const [error, setError]                 = useState(null);
-  const [generatingModels, setGeneratingModels] = useState(false);
-  const [modelProgress, setModelProgress]       = useState('');
-  const [modelShots, setModelShots]             = useState(null);
+  // Model shots — each model is independent: null | 'loading' | { imageUrl, shareId } | { error }
+  const [modelShots, setModelShots] = useState({ male: null, female: null, child: null });
   const fileInputRefs = useRef({});
   const stepTimers    = useRef([]);
 
@@ -137,7 +136,7 @@ export default function CapMockupGenerator() {
     if (!designs.front) return;
     setGenerating(true);
     setResult(null);
-    setModelShots(null);
+    setModelShots({ male: null, female: null, child: null });
     setError(null);
     startLoadingAnimation();
     // Increment seed each time so auto mode picks a different design direction
@@ -169,31 +168,24 @@ export default function CapMockupGenerator() {
     }
   };
 
-  // ── Model shots ───────────────────────────────────────────────────────
-  const handleModelShots = async () => {
-    if (!designs.front || !result?.imageUrl) return;
-    setGeneratingModels(true);
-    setModelShots(null);
-    setModelProgress('Creating lifestyle previews…');
+  // ── Model shots — each generates independently ────────────────────────
+  const MODEL_LABELS = { male: 'Men', female: 'Women', child: 'Kids' };
 
+  const handleModelShot = async (key) => {
+    if (!designs.front || !result?.imageUrl) return;
+    setModelShots(prev => ({ ...prev, [key]: 'loading' }));
     try {
-      const modelKeys = ['male', 'female', 'child'];
-      const labels    = ['Men', 'Women', 'Kids'];
-      const results   = await Promise.all(modelKeys.map(async (key, i) => {
-        const fd = buildFormData({ mode: 'model', modelKey: key });
-        // Send the already-rendered cap image so the model uses the exact cap
-        fd.append('cap_image_url', result.imageUrl);
-        const res = await fetch(API_ENDPOINT, { method: 'POST', body: fd });
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) return { key, label: labels[i], error: data.error || 'Failed' };
-        return { key, label: labels[i], imageUrl: data.imageUrl, shareId: data.shareId };
-      }));
-      setModelShots(results);
+      const fd = buildFormData({ mode: 'model', modelKey: key });
+      fd.append('cap_image_url', result.imageUrl);
+      const res  = await fetch(API_ENDPOINT, { method: 'POST', body: fd });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setModelShots(prev => ({ ...prev, [key]: { error: data.error || 'Failed' } }));
+      } else {
+        setModelShots(prev => ({ ...prev, [key]: { imageUrl: data.imageUrl, shareId: data.shareId } }));
+      }
     } catch (err) {
-      setError(err.message);
-    } finally {
-      setGeneratingModels(false);
-      setModelProgress('');
+      setModelShots(prev => ({ ...prev, [key]: { error: err.message } }));
     }
   };
 
@@ -528,52 +520,59 @@ export default function CapMockupGenerator() {
                     )}
                   </div>
 
-                  {/* See it on models */}
+                  {/* See it on models — three independent shots */}
                   <div className="pt-3" style={{ borderTop: '1px solid #d6d0c0' }}>
-                    {!modelShots && !generatingModels && (
-                      <button onClick={handleModelShots}
-                        className="w-full py-3 flex items-center justify-center gap-2 text-sm"
-                        style={{ backgroundColor: '#1a1a1a', color: '#f5f1e8', fontFamily: 'Anton, sans-serif', letterSpacing: '0.05em' }}>
-                        <Users size={16} /> SEE IT ON MODELS
-                      </button>
-                    )}
-
-                    {generatingModels && (
-                      <div className="text-center py-6">
-                        <Loader2 size={24} className="animate-spin mx-auto mb-3" style={{ color: '#c2410c' }} />
-                        <p className="text-xs" style={{ fontFamily: 'JetBrains Mono, monospace' }}>{modelProgress}</p>
-                        <p className="text-xs mt-1" style={{ color: '#6b6452' }}>Placing your cap on models (30-45 sec)</p>
-                      </div>
-                    )}
-
-                    {modelShots && !generatingModels && (
-                      <div className="space-y-3">
-                        <div className="grid grid-cols-3 gap-2">
-                          {modelShots.map(shot => (
-                            <div key={shot.key} className="border bg-white" style={{ borderColor: '#d6d0c0' }}>
-                              {shot.imageUrl ? (
-                                <img src={shot.imageUrl} alt={shot.label} className="w-full block" />
-                              ) : (
-                                <div className="aspect-square flex items-center justify-center p-2" style={{ backgroundColor: '#fdf0f0' }}>
-                                  <p className="text-[10px] text-center" style={{ color: '#a83232' }}>Failed</p>
-                                </div>
-                              )}
-                              <div className="px-2 py-1 text-center" style={{ borderTop: '1px solid #f0ece2' }}>
+                    <div className="text-[10px] tracking-[0.2em] mb-2" style={{ fontFamily: 'JetBrains Mono, monospace', color: '#6b6452' }}>
+                      SEE IT ON MODELS
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      {Object.entries(MODEL_LABELS).map(([key, label]) => {
+                        const shot = modelShots[key];
+                        return (
+                          <div key={key} className="border bg-white overflow-hidden" style={{ borderColor: '#d6d0c0' }}>
+                            {shot === null && (
+                              <button
+                                onClick={() => handleModelShot(key)}
+                                className="w-full aspect-square flex flex-col items-center justify-center gap-1.5 hover:opacity-80 transition-opacity"
+                                style={{ backgroundColor: '#f5f1e8' }}>
+                                <Users size={18} style={{ color: '#a39d8d' }} />
                                 <span className="text-[9px] tracking-[0.15em]" style={{ fontFamily: 'JetBrains Mono, monospace', color: '#6b6452' }}>
-                                  {shot.label.toUpperCase()}
+                                  {label.toUpperCase()}
+                                </span>
+                              </button>
+                            )}
+                            {shot === 'loading' && (
+                              <div className="w-full aspect-square flex flex-col items-center justify-center gap-2" style={{ backgroundColor: '#fafaf7' }}>
+                                <Loader2 size={18} className="animate-spin" style={{ color: '#c2410c' }} />
+                                <span className="text-[9px]" style={{ fontFamily: 'JetBrains Mono, monospace', color: '#a39d8d' }}>
+                                  {label.toUpperCase()}
                                 </span>
                               </div>
-                            </div>
-                          ))}
-                        </div>
-                        {/* Single retry button only */}
-                        <button onClick={handleModelShots}
-                          className="w-full py-2.5 border flex items-center justify-center gap-1.5 text-sm"
-                          style={{ borderColor: '#1a1a1a', fontFamily: 'Anton, sans-serif', letterSpacing: '0.03em' }}>
-                          <RefreshCw size={14} /> TRY AGAIN
-                        </button>
-                      </div>
-                    )}
+                            )}
+                            {shot && shot !== 'loading' && shot.imageUrl && (
+                              <>
+                                <img src={shot.imageUrl} alt={label} className="w-full block" />
+                                <button
+                                  onClick={() => handleModelShot(key)}
+                                  className="w-full py-1 text-[9px] flex items-center justify-center gap-1 hover:opacity-70 transition-opacity"
+                                  style={{ borderTop: '1px solid #f0ece2', fontFamily: 'JetBrains Mono, monospace', color: '#6b6452' }}>
+                                  <RefreshCw size={9} /> {label.toUpperCase()}
+                                </button>
+                              </>
+                            )}
+                            {shot && shot !== 'loading' && shot.error && (
+                              <button
+                                onClick={() => handleModelShot(key)}
+                                className="w-full aspect-square flex flex-col items-center justify-center gap-1"
+                                style={{ backgroundColor: '#fdf0f0' }}>
+                                <span className="text-[9px]" style={{ color: '#a83232', fontFamily: 'JetBrains Mono, monospace' }}>FAILED</span>
+                                <span className="text-[9px]" style={{ color: '#a83232', fontFamily: 'JetBrains Mono, monospace' }}>TAP TO RETRY</span>
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
               )}
