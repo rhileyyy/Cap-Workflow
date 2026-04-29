@@ -312,7 +312,7 @@ export async function POST(request) {
         responseModalities: ['TEXT', 'IMAGE'],
         imageConfig: {
           aspectRatio: '1:1',
-          imageSize: '512',
+          imageSize: '1k',
         },
         // Note: thinkingConfig removed — conflicts with imageConfig in SDK 1.x
         // The model still uses thinking internally at its default level
