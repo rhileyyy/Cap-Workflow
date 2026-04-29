@@ -310,7 +310,7 @@ export async function POST(request) {
         responseModalities: ['IMAGE', 'TEXT'],
         imageConfig: {
           aspectRatio: '1:1',
-          imageSize: '1000', // 512px saves 33% vs 1K — fine for a preview tool
+          imageSize: '1k', // 512px saves 33% vs 1K — fine for a preview tool
         },
         thinkingConfig: {
           // 'minimal' = lowest latency while still using reasoning
