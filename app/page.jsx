@@ -37,7 +37,8 @@ const LOADING_STEPS = [
 
 export default function CapMockupGenerator() {
   const [designs, setDesigns]         = useState({ front: null, leftSide: null, rightSide: null });
-  const [autoMode, setAutoMode]       = useState(true); // default ON
+  const [autoMode, setAutoMode]       = useState(true);
+  const [variationSeed, setVariationSeed] = useState(0); // default ON
   const [colors, setColors]           = useState({ front: '#1a1a1a', mesh: '#1a1a1a', brim: '#1a1a1a', snapback: '#1a1a1a' });
   const [stripeCount, setStripeCount] = useState(0);
   const [stripeColor, setStripeColor] = useState('#ffffff');
@@ -91,6 +92,7 @@ export default function CapMockupGenerator() {
     const fd = new FormData();
     fd.append('mode',      overrides.mode     || (autoMode ? 'auto' : 'product'));
     fd.append('modelKey',  overrides.modelKey || 'male');
+    fd.append('variationSeed', String(overrides.variationSeed ?? variationSeed));
     // Only send colour/stripe data in manual mode — in auto mode the AI picks these
     if (!autoMode || overrides.mode === 'model') {
       fd.append('color_front',    colors.front);
@@ -116,9 +118,12 @@ export default function CapMockupGenerator() {
     setModelShots(null);
     setError(null);
     startLoadingAnimation();
+    // Increment seed each time so auto mode picks a different design direction
+    const nextSeed = autoMode ? variationSeed + 1 : variationSeed;
+    if (autoMode) setVariationSeed(nextSeed);
 
     try {
-      const res = await fetch(API_ENDPOINT, { method: 'POST', body: buildFormData() });
+      const res = await fetch(API_ENDPOINT, { method: 'POST', body: buildFormData({ variationSeed: nextSeed }) });
       // Use text() first so a non-JSON response (HTML error page, etc.) doesn't crash
       const text = await res.text();
       let data = {};
