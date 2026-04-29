@@ -292,14 +292,29 @@ export default function CapMockupGenerator() {
                       </div>
                     ))}
                   </div>
-                  <div className="flex flex-wrap gap-1.5 mt-3 pt-3" style={{ borderTop: '1px solid #f0ece2' }}>
-                    {QUICK_COLORS.map(c => {
-                      const sel = colors.front.toLowerCase() === c.toLowerCase();
-                      return (
-                        <button key={c} onClick={() => setColor('front', c)} className="w-7 h-7"
-                          style={{ backgroundColor: c, border: sel ? '2px solid #c2410c' : '1px solid rgba(0,0,0,0.15)', boxShadow: sel ? '0 0 0 1.5px #f5f1e8 inset' : 'none' }} title={c} />
-                      );
-                    })}
+                  <div style={{ borderTop: '1px solid #f0ece2' }} className="mt-3 pt-3">
+                    <div className="text-[9px] tracking-[0.15em] mb-2" style={{ fontFamily: 'JetBrains Mono, monospace', color: '#a39d8d' }}>
+                      QUICK START — SETS ALL PARTS
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {QUICK_COLORS.map(c => {
+                        const sel = colors.front.toLowerCase() === c.toLowerCase()
+                                 && colors.mesh.toLowerCase() === c.toLowerCase()
+                                 && colors.brim.toLowerCase() === c.toLowerCase();
+                        return (
+                          <button key={c}
+                            onClick={() => setColors({ front: c, mesh: c, brim: c })}
+                            className="w-7 h-7"
+                            style={{
+                              backgroundColor: c,
+                              border: sel ? '2px solid #c2410c' : '1px solid rgba(0,0,0,0.15)',
+                              boxShadow: sel ? '0 0 0 1.5px #f5f1e8 inset' : 'none',
+                            }}
+                            title={c}
+                          />
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
 
