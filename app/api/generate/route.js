@@ -26,7 +26,7 @@ function buildAutoPrompt(s) {
     : 'Image 1 is the REFERENCE CAP to edit. Image 2 is the FRONT PANEL LOGO. ';
 
   const sideInstruction = sideLogos.length > 0
-    ? `Image 3 is the SIDE PANEL DESIGN. Reproduce it EXACTLY on the ${sideLogos.join(' and ')} in the lower mesh area, on top of any stripes — every shape, letter, colour, and detail must match precisely, including any white or light-coloured elements which must NOT be filled in or simplified. Raised 3D embroidery with visible stitches. The side design must be embroidered SMALL — it is a small accent badge, approximately 1/4 to 1/3 the size of the front panel logo. Do NOT scale it to fill the side mesh panel.`
+    ? `Image 3 is the SIDE PANEL DESIGN. Reproduce it EXACTLY on the ${sideLogos.join(' and ')} in the lower mesh area, on top of any stripes — every shape, letter, colour, and detail must match precisely, including any white or light-coloured elements which must NOT be filled in or simplified. Raised 3D embroidery with visible stitches. The side design must be embroidered SMALL — it is a small accent badge, approximately 1/5 to 1/4 the size of the front panel logo. Do NOT scale it to fill the side mesh panel.`
     : '';
 
   // Colour-direction cycling — varies each Try Again
