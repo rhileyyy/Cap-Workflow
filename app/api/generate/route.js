@@ -197,30 +197,57 @@ export async function POST(request) {
       // Solution: drop the base cap reference from the parts array.
       // The prompt language already describes the cap construction fully.
 
-      // Slot 1: front logo
+      // ── Pick the correct reference cap based on stripe count ─────────────
+      // These are real photographs of blank caps with the correct stripe
+      // placement — Gemini edits them rather than generating from scratch.
+      const refFilename = settings.stripeCount === 1 ? 'cap-1stripe.jpg'
+                        : settings.stripeCount === 2 ? 'cap-2stripe.jpg'
+                        : settings.stripeCount === 3 ? 'cap-3stripe.jpg'
+                        : 'cap-0stripe.jpg';
+
+      const host     = headersList.get('host') || 'localhost:3000';
+      const protocol = host.includes('localhost') ? 'http' : 'https';
+      const refUrl   = `${protocol}://${host}/${refFilename}`;
+
+      let refPart = null;
+      try {
+        const refResp = await fetch(refUrl);
+        if (refResp.ok) {
+          const refBuffer = Buffer.from(await refResp.arrayBuffer());
+          refPart = { inlineData: { mimeType: 'image/jpeg', data: refBuffer.toString('base64') } };
+        }
+      } catch {
+        console.warn('Could not fetch reference cap:', refFilename);
+      }
+
+      // ── Assemble parts ────────────────────────────────────────────────────
+      // Slot order: reference cap → prompt → front logo × 2 → side logo × 2
+      // The reference cap is the base image being edited — it comes FIRST
+      // so Gemini treats it as the canvas, not as an inspiration image.
       const hasSide = settings.hasSideLeft || settings.hasSideRight;
       const sideFile = settings.hasSideLeft ? leftFile
                      : settings.hasSideRight ? rightFile
                      : null;
       const sideImg = sideFile ? await fileToBase64Cached(sideFile) : null;
 
-      // Build a prompt prefix that names images explicitly
-      // With side logo: Image 1 = front, Image 2 = front emphasis,
-      //                 Image 3 = side,  Image 4 = side emphasis
-      // Without side logo: Image 1 = front, Image 2 = front emphasis
+      // Slot naming for the prompt
+      // ref cap = Image 1, front logo = Image 2 (+ 3 emphasis), side = Image 4 (+ 5 emphasis)
       const imageRefs = hasSide
-        ? 'Image 1 is the FRONT PANEL LOGO. Image 2 is also the FRONT PANEL LOGO (emphasis). Image 3 is the SIDE PANEL DESIGN. Image 4 is also the SIDE PANEL DESIGN (emphasis). '
-        : 'Image 1 is the FRONT PANEL LOGO. Image 2 is also the FRONT PANEL LOGO (emphasis). ';
+        ? 'Image 1 is the REFERENCE CAP to edit. Image 2 and Image 3 are both the FRONT PANEL LOGO. Image 4 and Image 5 are both the SIDE PANEL DESIGN. '
+        : 'Image 1 is the REFERENCE CAP to edit. Image 2 and Image 3 are both the FRONT PANEL LOGO. ';
 
-      // Push prompt first, then images in named order
+      // Reference cap first (the canvas)
+      if (refPart) parts.push(refPart);
+
+      // Prompt
       parts.push({ text: imageRefs + prompt });
 
-      // Front logo × 2 (slots 1 & 2)
+      // Front logo × 2
       parts.push({ inlineData: { mimeType: frontImg.mimeType, data: frontImg.data } });
       parts.push({ inlineData: { mimeType: frontImg.mimeType, data: frontImg.data } });
 
+      // Side design × 2 if uploaded
       if (sideImg) {
-        // Side design × 2 (slots 3 & 4) — same emphasis treatment as front
         parts.push({ inlineData: { mimeType: sideImg.mimeType, data: sideImg.data } });
         parts.push({ inlineData: { mimeType: sideImg.mimeType, data: sideImg.data } });
       }
