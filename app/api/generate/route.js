@@ -18,23 +18,64 @@ import { headers } from 'next/headers';
 import { createHash } from 'crypto';
 import sharp from 'sharp';
 
+// ── Placement + Optical Scaling System ─────────────────────────────
+
+const PLACEMENTS = {
+  FRONT: { width: 0.42, min: 0.38, max: 0.46 },
+
+  LEFT: {
+    anchor: 'rear',
+    position: 0.32, // moved back slightly
+    scale: [0.28, 0.38],
+  },
+
+  RIGHT: {
+    anchor: 'front',
+    position: 0.66,
+    scale: [0.32, 0.42],
+  },
+
+  REAR: {
+    scale: [0.2, 0.25],
+  }
+};
+
+function getLogoType(name = '') {
+  const n = name.toLowerCase();
+
+  if (n.includes('script') || n.includes('boogie') || n.includes('hand')) return 'script';
+  if (n.includes('badge') || n.includes('round') || n.includes('crest')) return 'badge';
+  if (n.length <= 3) return 'compact';
+
+  return 'standard';
+}
+
+function getOpticalScale([min, max], type) {
+  switch (type) {
+    case 'script': return [min + 0.04, max + 0.04];
+    case 'compact': return [min - 0.03, max - 0.03];
+    case 'badge': return [min - 0.02, max - 0.02];
+    default: return [min, max];
+  }
+}
+
 // ============================================================================
 // PROMPT TEMPLATES
 // ============================================================================
 
 const PROMPT_FRONT = {
   subject: 'Edit Image 1, which is a photograph of a blank grey trucker cap shown from a front 3/4 right angle. Keep the cap shape, construction, angle, lighting, mesh texture, brim shape, and stripe placement EXACTLY as they are in Image 1. Do NOT reimagine or redraw the cap. Only make the colour and embroidery changes described below.',
-  construction: 'Preserve from Image 1 exactly: the high crown shape, single-piece structured front panel, mesh rear panels, brim curve, squatchee button, snapback closure, and the stripe count and placement. Stripes are decorative surface elements, not seams. Keep them fixed. Embroidery sits ON TOP of stripes. Preserve the EXACT stripe count, thickness, spacing, curvature, and position from Image 1 — all stripes must remain separate and fully visible. Stripes exist ONLY on the side panels exactly as shown in Image 1. Do NOT add, extend, or continue any stripes onto the brim under any circumstance. Do not merge, remove, fade, or reinterpret any stripe. Do not change the brim shape. No topstitching on the brim.',
-  embroidery: 'All logos are raised 3D embroidery with visible stitching.',
-  logoLockdown: 'Image 2 is the front logo. Embroider it centered on the front panel exactly as provided (no changes). Scale to exactly 42% of panel width (max 46%, min 38%) with even margins and clear spacing from seams.',
-  avoid: 'Do not alter cap structure, geometry, materials, stripes, or camera angle. No extra elements or people.',
+  construction: 'Preserve from Image 1 exactly: the high crown shape, single-piece structured front panel, mesh rear panels, brim curve, squatchee button, snapback closure, and the stripe count and placement. Do not add or remove stripes. Do not change the brim shape. No topstitching on the brim.',
+  embroidery: 'All logos are rendered as 3D high detail embroidery raised above the cap surface. Black outlined embroidery on all positions. Individual thread stitches clearly visible. Each embroidered element casts a shadow onto the fabric beneath it. 'Adjust scale for optical balance so thin/script logos appear slightly larger and compact logos slightly smaller.',
+  logoLockdown: 'Image 2 is the front logo. Embroider it centered on the front panel exactly as provided. Scale to exactly 42% of panel width (min 38%, max 46%) with even margins and clear spacing from seams.',
+  avoid: 'Do not change the cap shape or construction. Do NOT add parts. Do NOT repeat logo embroiders. Do NOT move or add stripes to any part of the cap. Do not add stripes to the brim. Do not add topstitching to the brim. Do not change the mesh. Do not add a model or person. Do not change the background colour.',
 };
 
 const PROMPT_REAR = {
   subject: 'Edit Image 1, which is a photograph of a blank grey trucker cap shown from a rear 3/4 left angle (looking at the back of the cap from the left side). Keep the EXACT same camera angle, perspective, and composition as Image 1 — do NOT rotate the cap or change the viewing angle. Keep the cap shape, construction, lighting, mesh texture, brim shape, snapback closure, and stripe placement EXACTLY as they are in Image 1. Do NOT reimagine or redraw the cap. Only make the colour and embroidery changes described below.',
-  construction: 'Preserve from Image 1 exactly: the high crown shape, single-piece structured front panel, mesh rear panels, brim curve, squatchee button, snapback closure, and the stripe count and placement. Stripes are decorative surface elements, not seams. Keep them fixed. Embroidery sits ON TOP of stripes. Stripes exist ONLY on the side panels exactly as shown in Image 1. Do NOT add, extend, or continue any stripes onto the brim under any circumstance. Do not merge, remove, fade, or reinterpret any stripe. Do not change the brim shape. No topstitching on the brim.',
-  embroidery: 'All logos are raised 3D embroidery with visible stitching.',
-  avoid: 'Do not alter cap structure, geometry, materials, stripes, or camera angle. No extra elements or people.',
+  construction: 'Preserve from Image 1 exactly: the mesh panels, snapback closure, brim curve from behind, squatchee button, and any stripe positions. Do not add or remove stripes. Do not change the brim shape. No topstitching on the brim. Do NOT rotate the cap to show the front panel.',
+  embroidery: 'All logos are rendered as 3D high detail embroidery raised above the cap surface. Black outlined embroidery on all positions. Individual thread stitches clearly visible. Each embroidered element casts a shadow onto the fabric beneath it. Adjust scale for optical balance so thin/script logos appear slightly larger and compact logos slightly smaller.',
+  avoid: 'Do not change the cap shape or construction. Do NOT add parts. Do NOT repeat logo embroiders. Do not change the camera angle or rotate the cap. Do NOT move or add stripes to any part of the cap. Do not add stripes to the brim. Do not add topstitching to the brim. Do not change the mesh. Do not add a model or person. Do not change the background colour. Do NOT place any embroidery on the right side of the cap — the right side is not visible from this rear 3/4 left angle.',
 };
 
 // ── Colour description helper ─────────────────────────────────────────────
@@ -77,11 +118,16 @@ function buildFrontProductPrompt(s) {
   const colourLine = `Change the cap colours: make the front panel ${front}, the mesh ${mesh}, and the brim ${brim}.`
     + (s.sandwichBrim ? ` Add a sandwich brim — a contrasting ${describeColor(s.sandwichColor)} layer visible along the underside edge of the brim.` : '');
   const stripeLine = s.stripeCount === 0 ? ''
-    : `Change the stripe colour to ${describeColor(s.stripeColor)}. Keep the stripes exactly AS IS in Image 1 — do NOT move them, Stripes are purely decorative surface elements and are NOT seams, joins, or panel boundaries. Do not interpret stripes as construction lines.`;
+    : `Change the stripe colour to ${describeColor(s.stripeColor)}. Keep the stripes exactly AS IS in Image 1 — do NOT move them.`;
 
-  const rightLogoLine = s.hasRight
-    ? `Image 3 is the RIGHT SIDE DESIGN. Place it on the right mesh panel in the rear half, anchored near the seam between the front panel and mesh, with center ~66% from the front seam (back-biased, not centered). Vertically centered, bottom just above the stripe with a tight gap (no overlap). Scale ~32–42% of panel width, adjusted for visual balance. Do not touch seams. Keep placement consistent across views. Raised embroidery over mesh and stripes.`
-    : '';
+const rightLogoLine = s.hasRight
+  ? (() => {
+      const type = getLogoType(s.rightLogoName);
+      const [min, max] = getOpticalScale(PLACEMENTS.RIGHT.scale, type);
+
+      return `Image 3 is the RIGHT SIDE DESIGN. Place it on the right mesh panel in the rear half, anchored near the front seam, center ~66% from the front seam (back-biased). Vertically centered, bottom just above the stripe with a tight gap (no overlap). Scale ~${Math.round(min*100)}–${Math.round(max*100)}% of panel width for balanced visual weight. Do not touch seams. Raised embroidery over mesh and stripes.`;
+    })()
+  : '';
 
   return [P.subject, P.construction, colourLine, stripeLine, P.embroidery, P.logoLockdown, rightLogoLine, P.avoid].filter(Boolean).join(' ');
 }
@@ -96,20 +142,24 @@ function buildRearProductPrompt(s) {
   const colourLine = `Change the cap colours: make the front panel ${front}, the mesh ${mesh}, and the brim ${brim}.`
     + (s.sandwichBrim ? ` Add a sandwich brim — a contrasting ${describeColor(s.sandwichColor)} layer visible along the underside edge of the brim.` : '');
   const stripeLine = s.stripeCount === 0 ? ''
-    : `Change the stripe colour to ${describeColor(s.stripeColor)}.  Keep the stripes exactly AS IS in Image 1 — do NOT move them, Stripes are purely decorative surface elements and are NOT seams, joins, or panel boundaries. Do not interpret stripes as construction lines.`;
+    : `Change the stripe colour to ${describeColor(s.stripeColor)}. Keep the stripes exactly where they are in Image 1 — do not move them.`;
 
   const logoLines = [];
   let imgIndex = 2;
 
   if (s.hasRear) {
-  logoLines.push(`Image ${imgIndex} is the REAR LOGO. Place it centered on the back of the cap above the snapback closure. Scale SMALL (~20–25% of front logo size). Raised 3D embroidery with visible stitching. Do not fill the panel.`);
-  imgIndex++;
+    logoLines.push(`Image ${imgIndex} is the REAR LOGO. Embroider it on the centre back of the cap above the snapback closure — same shapes, same text, same proportions, same colours. The 3D embroidery should be SMALL — a small accent badge, approximately 1/4 to 1/5 the size of a front panel logo. Raised 3D high detail embroidery with visible stitches. Do NOT scale it to fill the back panel.`);
+    imgIndex++;
   }
+if (s.hasLeft) {
+  const type = getLogoType(s.leftLogoName);
+  const [min, max] = getOpticalScale(PLACEMENTS.LEFT.scale, type);
 
-  if (s.hasLeft) {
-  logoLines.push(`Image ${imgIndex} is the LEFT SIDE DESIGN. Place it on the left mesh panel in the rear-lower quadrant, anchored close to the rear seam and positioned slightly above the stripe band. The logo center should sit ~30–34% from the rear seam toward the front (strong back-bias), and slightly below vertical center of the panel. Keep a tight consistent gap above the stripe (no overlap). Scale ~28–38% of panel width, adjusted for balanced visual weight. Do not touch seams. Maintain consistent placement across views. Raised embroidery over mesh and stripes.`);
+  logoLines.push(
+    `Image ${imgIndex} is the LEFT SIDE DESIGN. Place it on the left mesh panel in the rear-lower quadrant, anchored near the rear seam, center ~32% from the rear seam (strong back-bias). Position slightly below vertical center, just above the stripe with a tight gap (no overlap). Scale ~${Math.round(min*100)}–${Math.round(max*100)}% of panel width for balanced visual weight. Do not touch seams. Raised embroidery over mesh, in front of stripes.`
+  );
   imgIndex++;
-  }
+}
 
   logoLines.push('IMPORTANT: Only place embroidery on the parts of the cap that are visible in Image 1. Do NOT invent a different camera angle. The output must match Image 1\'s exact viewing angle.');
 
@@ -136,15 +186,16 @@ function buildFrontAutoPrompt(s) {
     : 'The reference cap has no stripes — keep it that way.';
 
   const rightInstruction = s.hasRight
-  ? `Image 3 is the RIGHT SIDE DESIGN. Place it on the right mesh panel in the rear half, anchored near the seam between the front panel and mesh, with center ~66% from the front seam (back-biased, not centered). Vertically centered, bottom overlapping stripes. Scale ~32–42% of panel width, adjusted for visual balance. Do not touch seams. Keep placement consistent across views. Raised embroidery over mesh and stripes.`
-  : '';
+    ? `Image 3 is the RIGHT SIDE DESIGN. Reproduce it EXACTLY on the right side mesh panel — every shape, letter, colour, and detail must match precisely. The 3D high detail embroidery is sewn OVER TOP OF any stripes — the logo sits in the foreground, stripes in the background, partially covered by the embroidery. Raised 3D embroidery with visible stitches. The side design must be embroidered SMALL — approximately 1/3 to 1/2 the size of the front panel logo. Do NOT scale it to fill the mesh panel.`
+    : '';
 
   return [
     'Edit Image 1, which is a photograph of a blank grey trucker cap from a front 3/4 right angle. Keep the cap shape, construction, angle, lighting, mesh texture, brim shape, and stripe placement EXACTLY as they are in Image 1. Only make the colour and embroidery changes described below.',
-    'Preserve from Image 1 exactly: the crown shape, front panel, mesh panels, brim curve, squatchee button, snapback closure, and any stripe positions.  stripes. No topstitching on the brim.',
-    `Analyse the logo in Image 2 and extract its exact colour palette. Use ONLY colours derived from the logo. Assign them consistently as follows: front panel uses the dominant logo colour, brim matches the front panel or uses the same dominant tone, mesh uses a neutral or secondary logo-derived tone, and stripes (if present) use a complementary or accent colour from the logo. ${direction} ${stripeNote} Decide whether a sandwich brim would complement the look. This colour palette must remain consistent across all generated views — do not reinterpret or vary colours. Make choices a professional cap designer would make.`,
+    'Preserve from Image 1 exactly: the crown shape, front panel, mesh panels, brim curve, squatchee button, snapback closure, and any stripe positions. Do not move, add, or remove stripes. No topstitching on the brim.',
+    `Analyse the logo in Image 2. Based on its colours, style, and brand aesthetic, choose the ideal cap colours: front panel, mesh, and brim. ${direction} ${stripeNote} Decide whether a sandwich brim would complement the look. Make choices a professional cap designer would make.`,
     'All logos rendered as 3D high detail embroidery raised above the cap surface. Black outlined embroidery on all positions. Individual thread stitches clearly visible.',
-    'Image 2 is the front logo. 3D Embroider it on the centre of the front panel EXACTLY as shown — same shapes, same text, same proportions, same colours. Scale the logo to exactly 42% of the front panel width (max 46%, min 38%), centered with even margins. Maintain clear breathing room on all sides and do not approach seams or edges.',
+    'Image 2 is the front logo. Embroider it on the centre of the front panel EXACTLY as shown — same shapes, same text, same proportions, same colours. The embroidery should occupy approximately 40-50% of the front panel width, leaving clear breathing room on all sides. Do NOT redraw, simplify, or substitute any part.',
+    rightInstruction,
     'Do not change the cap shape or construction. Do NOT move or add stripes to any part of the cap. Do not add topstitching to the brim. Do not add a model or person. Do not change the background.',
   ].filter(Boolean).join(' ');
 }
@@ -175,15 +226,21 @@ function buildRearAutoPrompt(s) {
     imgIndex++;
   }
   if (s.hasLeft) {
-logoLines.push(`Image ${imgIndex} is the LEFT SIDE DESIGN. Place it on the left mesh panel in the rear-lower quadrant, anchored close to the rear seam and positioned slightly above the stripe band. The logo center should sit ~30–34% from the rear seam toward the front (strong back-bias), and slightly below vertical center of the panel. Keep a tight consistent gap above the stripe (no overlap). Scale ~28–38% of panel width, adjusted for balanced visual weight. Do not touch seams. Maintain consistent placement across views. Raised embroidery over mesh and stripes.`);
-   imgIndex++;
-  }
+  const type = getLogoType(s.leftLogoName);
+  const [min, max] = getOpticalScale(PLACEMENTS.LEFT.scale, type);
+
+  logoLines.push(
+    `Image ${imgIndex} is the LEFT SIDE DESIGN. Place it on the left mesh panel in the rear-lower quadrant, anchored near the rear seam, center ~32% from the rear seam. Slightly below vertical center, just above the stripe with a tight gap. Scale ~${Math.round(min*100)}–${Math.round(max*100)}% of panel width. Raised embroidery over mesh, in front of stripes.`
+  );
+  imgIndex++;
+}
 
   return [
     'Edit Image 1, which is a photograph of a blank grey trucker cap from a rear 3/4 left angle (looking at the back from the left side). Keep the EXACT same camera angle, perspective, and composition as Image 1 — do NOT rotate the cap or change the viewing angle. Keep the cap shape, construction, lighting, mesh texture, brim shape, snapback closure, and stripe placement EXACTLY as they are in Image 1. Only make the colour and embroidery changes described below.',
-    'Preserve from Image 1 exactly: the mesh panels, snapback closure, brim curve, squatchee button, and any stripe positions. Do not alter stripes. No topstitching on the brim. Do NOT rotate the cap to show the front.',
-    `Analyse the logo in Image 2 and extract its exact colour palette. Use ONLY colours derived from the logo. Assign them consistently as follows: front panel uses the dominant logo colour, brim matches the front panel or uses the same dominant tone, mesh uses a neutral or secondary logo-derived tone, and stripes (if present) use a complementary or accent colour from the logo. ${direction} ${stripeNote} Decide whether a sandwich brim would complement the look. This colour palette must remain consistent across all generated views — do not reinterpret or vary colours. Make choices a professional cap designer would make.`,
+    'Preserve from Image 1 exactly: the mesh panels, snapback closure, brim curve, squatchee button, and any stripe positions. Do not move, add, or remove stripes. No topstitching on the brim. Do NOT rotate the cap to show the front.',
+    `Analyse the logo in Image 2. Based on its colours, style, and brand aesthetic, choose the ideal cap colours: front panel, mesh, and brim. ${direction} ${stripeNote} Make choices a professional cap designer would make.`,
     'All logos rendered as 3D high detail embroidery raised above the cap surface. Black outlined embroidery on all positions. Individual thread stitches clearly visible.',
+    ...logoLines,
     'Do not change the cap shape or construction. Do not change the camera angle or rotate the cap. Do not move or add stripes. Do not add stripes to the brim. Do not add topstitching to the brim. Do not add a model or person. Do not change the background. Do NOT place any embroidery on the right side of the cap — the right side is not visible from this rear 3/4 left angle.',
   ].filter(Boolean).join(' ');
 }
