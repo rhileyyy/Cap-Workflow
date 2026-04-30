@@ -18,72 +18,79 @@ import { headers } from 'next/headers';
 import { createHash } from 'crypto';
 import sharp from 'sharp';
 
-// ── Placement + Optical Scaling System ─────────────────────────────
+// ============================================================================
+// LOGO SHAPE ANALYSIS
+// Reads real pixel dimensions from the uploaded file buffer via Sharp metadata.
+// Returns a scale range and plain-English shape description for the prompt.
+//
+// Scale is expressed as a fraction of the visible mesh panel width, calibrated
+// so the embroidered logo reads at the same visual weight regardless of shape:
+//
+//   Very wide  (AR > 3.5) — wordmark/banner     → needs large % to be readable
+//   Wide       (AR 2–3.5) — standard horizontal  → default range
+//   Squarish   (AR 0.8–2) — badge/icon/stacked   → slightly smaller %
+//   Tall       (AR < 0.8) — vertical/portrait     → narrower %, let height fill
+//
+// The base ranges are tuned for the side mesh panel (~1/3 of total cap width).
+// ============================================================================
 
-const PLACEMENTS = {
-  FRONT: {
-    min: 0.38,
-    max: 0.46,
-  },
+async function analyseLogoShape(buffer) {
+  try {
+    // Trim transparent pixels first so we measure the actual artwork, not canvas.
+    const trimmed = await sharp(buffer).trim().metadata();
+    const w = trimmed.width  || 1;
+    const h = trimmed.height || 1;
+    const ar = w / h; // aspect ratio
 
-  LEFT: {
-    // Horizontal: measured from the REAR seam. ~38% = forward-biased (closer to brim seam).
-    position: 0.38,
-    scale: [0.22, 0.28],
-    vertical: {
-      overlap: [0.50, 0.65], // % of logo height that overlaps the stripe band
-    },
-  },
+    let minScale, maxScale, shapeDesc, verticalBias;
 
-  RIGHT: {
-    // Horizontal: measured from the FRONT seam. ~55% = rear-biased (well clear of front seam).
-    position: 0.55,
-    scale: [0.28, 0.38],
-    vertical: {
-      overlap: [0.35, 0.45],
-    },
-  },
+    if (ar > 3.5) {
+      // Very wide banner / long wordmark — needs more width to be legible
+      minScale     = 0.38;
+      maxScale     = 0.48;
+      shapeDesc    = 'a very wide horizontal wordmark or banner';
+      verticalBias = 'centred vertically across the stripe band, sitting slightly above the stripe midpoint';
+    } else if (ar > 2.0) {
+      // Standard wide logo / horizontal text+icon
+      minScale     = 0.30;
+      maxScale     = 0.40;
+      shapeDesc    = 'a wide horizontal logo';
+      verticalBias = 'centred with a slight downward bias so the lower portion overlaps the stripe band';
+    } else if (ar > 1.2) {
+      // Mildly wide — landscape badge or compact wordmark
+      minScale     = 0.26;
+      maxScale     = 0.34;
+      shapeDesc    = 'a landscape badge or compact horizontal logo';
+      verticalBias = 'centred with a slight downward bias so the lower portion overlaps the stripe band';
+    } else if (ar >= 0.8) {
+      // Square or nearly square — icon, round badge, crest
+      minScale     = 0.22;
+      maxScale     = 0.30;
+      shapeDesc    = 'a square or round badge logo';
+      verticalBias = 'centred with the lower third overlapping the stripe band';
+    } else {
+      // Tall / portrait — vertical stacked text or narrow icon
+      minScale     = 0.18;
+      maxScale     = 0.26;
+      shapeDesc    = 'a tall vertical logo';
+      verticalBias = 'centred vertically so it spans equally above and below the stripe band';
+    }
 
-  REAR: {
-    scale: [0.18, 0.22],
-  },
-};
-
-// ── Logo Type Detection ───────────────────────────────────────────
-
-function getLogoType(name = '') {
-  const n = name.toLowerCase();
-  if (n.includes('script') || n.includes('boogie') || n.includes('hand')) return 'script';
-  if (n.includes('badge') || n.includes('round') || n.includes('crest')) return 'badge';
-  if (n.length <= 3) return 'compact';
-  return 'standard';
-}
-
-// ── Optical Scaling (visual weight balancing) ─────────────────────
-
-function getOpticalScale([min, max], type) {
-  switch (type) {
-    case 'script':  return [min + 0.04, max + 0.04]; // thin logos need a size boost
-    case 'compact': return [min - 0.02, max - 0.02]; // prevent heavy look
-    case 'badge':   return [min - 0.02, max - 0.02];
-    default:        return [min, max];
-  }
-}
-
-// ── Vertical Offset Adjustment ────────────────────────────────────
-// Returns a descriptive nudge word for the prompt.
-
-function getVerticalBias(type) {
-  switch (type) {
-    case 'script':  return 'centred slightly above the stripe band midpoint';
-    case 'compact': return 'centred with a slight downward bias toward the stripe band';
-    case 'badge':   return 'centred with a slight downward bias toward the stripe band';
-    default:        return 'centred with a slight downward bias toward the stripe band';
+    return { minScale, maxScale, shapeDesc, verticalBias, ar, w, h };
+  } catch {
+    // Fallback if Sharp can't read the file — use safe middle values
+    return {
+      minScale:    0.26,
+      maxScale:    0.34,
+      shapeDesc:   'a logo',
+      verticalBias: 'centred with a slight downward bias so the lower portion overlaps the stripe band',
+      ar: 1, w: 0, h: 0,
+    };
   }
 }
 
 // ============================================================================
-// SHARED CONSTANTS
+// SHARED PROMPT CONSTANTS
 // ============================================================================
 
 // Colour-only changes: cap fabric parts only — NEVER touch logo colours.
@@ -92,10 +99,14 @@ const LOGO_COLOUR_LOCKDOWN =
   'Do NOT alter, recolour, simplify, or substitute any element of any logo. ' +
   'Only the cap fabric (front panel, mesh, brim, stripes) changes colour — logos never change colour.';
 
-// Embroidery rendering (no scale guidance — scale numbers are given per-logo below).
+// Embroidery rendering — satin-stitch language gives better 3D results than
+// "puff embroidery" for detailed logos. Describes physical height and shadow.
 const EMBROIDERY_RULES =
-  'All logos are rendered as 3D high-detail puff embroidery raised above the cap surface. ' +
-  'Individual thread stitches clearly visible. Each embroidered element casts a distinct shadow onto the fabric beneath it.';
+  'All logos are rendered as professional satin-stitch machine embroidery: ' +
+  'smooth parallel thread fills within each colour section, raised above the fabric on a firm stabiliser backing, ' +
+  'sitting proud of the surface like a solid sewn patch. ' +
+  'The raised edge of the embroidery casts a hard-edged shadow onto the fabric directly beneath it. ' +
+  'Individual stitches and thread texture are clearly visible at the edges of each filled section.';
 
 // ============================================================================
 // PROMPT TEMPLATES
@@ -121,7 +132,7 @@ const PROMPT_FRONT = {
     'Do not change the cap shape or construction. Do NOT add parts. Do NOT repeat any logo on multiple positions. ' +
     'Preserve the EXACT stripe count, thickness, spacing, curvature, and position from Image 1 — only the stripe colour changes. ' +
     'Stripes exist ONLY on the side mesh panels and must NOT appear on the brim. ' +
-    'Side embroidery sits on top of stripes (foreground over background). ' +
+    'Side embroidery sits in the foreground on top of stripes — stripes remain visible beneath it. ' +
     'Do not add topstitching to the brim. Do not change the mesh. Do not add a model or person. Do not change the background colour.',
 };
 
@@ -142,7 +153,7 @@ const PROMPT_REAR = {
     'Do not change the camera angle or rotate the cap. ' +
     'Preserve the EXACT stripe count, thickness, spacing, curvature, and position from Image 1 — only the stripe colour changes. ' +
     'Stripes exist ONLY on the side mesh panels and must NOT appear on the brim. ' +
-    'Side embroidery sits on top of stripes (foreground over background). ' +
+    'Side embroidery sits in the foreground on top of stripes — stripes remain visible beneath it. ' +
     'Do not add topstitching to the brim. Do not change the mesh. Do not add a model or person. Do not change the background colour. ' +
     'Do NOT place any embroidery on the right side of the cap — it is not visible from this rear 3/4 left angle.',
 };
@@ -177,45 +188,49 @@ function describeColor(hex) {
   return hex;
 }
 
-// ── Build the right-side logo instruction ────────────────────────────────
-function buildRightLogoInstruction(imgNum, logoName) {
-  const type = getLogoType(logoName);
-  const [min, max] = getOpticalScale(PLACEMENTS.RIGHT.scale, type);
-  const v = PLACEMENTS.RIGHT.vertical;
-  const bias = getVerticalBias(type);
+// ── Build right-side logo instruction from measured shape data ───────────
+// RIGHT side is visible in the FRONT 3/4 view.
+// Landmark-relative positioning: Gemini's spatial reasoning handles physical
+// descriptions ("midpoint of the visible mesh panel") much better than
+// abstract percentage numbers.
+function buildRightLogoInstruction(imgNum, shape) {
+  const minPct = Math.round(shape.minScale * 100);
+  const maxPct = Math.round(shape.maxScale * 100);
 
   return (
-    `Image ${imgNum} is the RIGHT SIDE DESIGN. ` +
+    `Image ${imgNum} is the RIGHT SIDE DESIGN — ${shape.shapeDesc}. ` +
     `Reproduce it EXACTLY — same shapes, same colours, same text, same proportions. ` +
-    `Place it on the right mesh panel: ` +
-    `centre the logo horizontally at ~${Math.round(PLACEMENTS.RIGHT.position * 100)}% of the mesh panel width measured from the front seam ` +
-    `(i.e. rear-biased, well clear of the front seam and rear seam). ` +
-    `Vertically: ${bias}. ` +
-    `The lower ${Math.round(v.overlap[0]*100)}–${Math.round(v.overlap[1]*100)}% of the logo height should overlap the stripe band. ` +
-    `Scale: ~${Math.round(min*100)}–${Math.round(max*100)}% of the mesh panel width. ` +
-    `Do not touch any seam edge. ` +
-    `Raised 3D puff embroidery with clearly visible thread stitches casting a shadow on the mesh and stripes beneath.`
+    `Placement on the right mesh panel: ` +
+    `centre the logo horizontally at the midpoint of the visible right mesh panel, ` +
+    `well clear of both the front panel seam and the rear mesh seam. ` +
+    `Vertically: ${shape.verticalBias}. ` +
+    `Scale: ~${minPct}–${maxPct}% of the mesh panel width — it is ${shape.shapeDesc}, ` +
+    `so adjust within this range so it reads clearly without crowding any seam edge. ` +
+    `The embroidery sits proud of the mesh surface like a solid raised patch in the foreground; ` +
+    `stripes are visible behind and beneath it. ` +
+    `Satin-stitch thread fills, hard-edged shadow at the base of the raised patch.`
   );
 }
 
-// ── Build the left-side logo instruction ────────────────────────────────
-function buildLeftLogoInstruction(imgNum, logoName) {
-  const type = getLogoType(logoName);
-  const [min, max] = getOpticalScale(PLACEMENTS.LEFT.scale, type);
-  const v = PLACEMENTS.LEFT.vertical;
-  const bias = getVerticalBias(type);
+// ── Build left-side logo instruction from measured shape data ────────────
+// LEFT side is visible in the REAR 3/4 view.
+// Positioned in the forward half of the mesh panel (closer to brim seam).
+function buildLeftLogoInstruction(imgNum, shape) {
+  const minPct = Math.round(shape.minScale * 100);
+  const maxPct = Math.round(shape.maxScale * 100);
 
   return (
-    `Image ${imgNum} is the LEFT SIDE DESIGN. ` +
+    `Image ${imgNum} is the LEFT SIDE DESIGN — ${shape.shapeDesc}. ` +
     `Reproduce it EXACTLY — same shapes, same colours, same text, same proportions. ` +
-    `Place it on the left mesh panel: ` +
-    `centre the logo horizontally at ~${Math.round(PLACEMENTS.LEFT.position * 100)}% of the mesh panel width measured from the rear seam ` +
-    `(i.e. forward-biased, closer to the brim seam than the rear seam). ` +
-    `Vertically: ${bias}. ` +
-    `The lower ${Math.round(v.overlap[0]*100)}–${Math.round(v.overlap[1]*100)}% of the logo height should overlap the stripe band. ` +
-    `Scale: ~${Math.round(min*100)}–${Math.round(max*100)}% of the mesh panel width. ` +
-    `Do not touch any seam edge. ` +
-    `Raised 3D puff embroidery with clearly visible thread stitches casting a shadow on the mesh and stripes beneath.`
+    `Placement on the left mesh panel: ` +
+    `centre the logo horizontally in the forward half of the mesh panel, ` +
+    `biased toward the brim-side seam and well clear of the rear mesh seam. ` +
+    `Vertically: ${shape.verticalBias}. ` +
+    `Scale: ~${minPct}–${maxPct}% of the mesh panel width — it is ${shape.shapeDesc}, ` +
+    `so adjust within this range so it reads clearly without crowding any seam edge. ` +
+    `The embroidery sits proud of the mesh surface like a solid raised patch in the foreground; ` +
+    `stripes are visible behind and beneath it. ` +
+    `Satin-stitch thread fills, hard-edged shadow at the base of the raised patch.`
   );
 }
 
@@ -232,14 +247,13 @@ function buildFrontProductPrompt(s) {
       ? ` Add a sandwich brim — a contrasting ${describeColor(s.sandwichColor)} layer visible along the underside edge of the brim.`
       : '');
 
-  // Split stripe instruction: colour change is explicit; position is preserved from reference.
   const stripeLine = s.stripeCount === 0 ? '' : (
     `Change the stripe colour to ${describeColor(s.stripeColor)}. ` +
     `Keep every other stripe property (count, thickness, spacing, curvature, position) EXACTLY as in Image 1 — do NOT move or redraw them.`
   );
 
-  const rightLogoLine = s.hasRight
-    ? buildRightLogoInstruction(3, s.rightLogoName)
+  const rightLogoLine = s.hasRight && s.rightShape
+    ? buildRightLogoInstruction(3, s.rightShape)
     : '';
 
   return [
@@ -279,14 +293,15 @@ function buildRearProductPrompt(s) {
   if (s.hasRear) {
     logoLines.push(
       `Image ${imgIndex} is the REAR LOGO. Use this image ONLY for the rear centre of the cap above the snapback closure — do NOT reuse it elsewhere. ` +
-      `Embroider it centred above the closure, scaled SMALL (~18–22% of the front panel logo width). ` +
-      `Raised 3D puff embroidery with clearly visible thread stitches casting a shadow on the fabric beneath.`
+      `Embroider it centred above the closure. Scale it SMALL so it reads as a compact accent badge — ` +
+      `approximately 18–22% of the visible rear panel width. ` +
+      `Satin-stitch embroidery, raised on a firm backing, hard-edged shadow at the base.`
     );
     imgIndex++;
   }
 
-  if (s.hasLeft) {
-    logoLines.push(buildLeftLogoInstruction(imgIndex, s.leftLogoName));
+  if (s.hasLeft && s.leftShape) {
+    logoLines.push(buildLeftLogoInstruction(imgIndex, s.leftShape));
     imgIndex++;
   }
 
@@ -325,8 +340,8 @@ function buildFrontAutoPrompt(s) {
     ? `The reference cap already has ${s.stripeCount} stripe${s.stripeCount > 1 ? 's' : ''} — keep them exactly where they are and choose a complementary stripe colour.`
     : 'The reference cap has no stripes — keep it that way.';
 
-  const rightInstruction = s.hasRight
-    ? buildRightLogoInstruction(3, s.rightLogoName)
+  const rightInstruction = s.hasRight && s.rightShape
+    ? buildRightLogoInstruction(3, s.rightShape)
     : '';
 
   return [
@@ -365,14 +380,14 @@ function buildRearAutoPrompt(s) {
   if (s.hasRear) {
     logoLines.push(
       `Image ${imgIndex} is the REAR LOGO. Embroider it centred on the rear of the cap above the snapback closure. ` +
-      `Scale SMALL (~18–22% of the front panel logo width). ` +
-      `Raised 3D puff embroidery with clearly visible thread stitches.`
+      `Scale it SMALL — approximately 18–22% of the visible rear panel width. ` +
+      `Satin-stitch embroidery, raised on a firm backing, hard-edged shadow at the base.`
     );
     imgIndex++;
   }
 
-  if (s.hasLeft) {
-    logoLines.push(buildLeftLogoInstruction(imgIndex, s.leftLogoName));
+  if (s.hasLeft && s.leftShape) {
+    logoLines.push(buildLeftLogoInstruction(imgIndex, s.leftShape));
     imgIndex++;
   }
 
@@ -408,28 +423,48 @@ function checkRateLimit(ip) {
   return { limited: false };
 }
 
-// ── Logo scaling ───────────────────────────────────────────────────────────
+// ── Logo processing: scale for API + shape analysis, one buffer read ──────
+// Both the scaled image (for Gemini) and the shape metadata (for the prompt)
+// are derived from the same buffer so the file is only read once per request.
 const scaledCache = new Map();
+const shapeCache  = new Map();
 
-async function fileToBase64Scaled(file, maxPx = 280) {
-  const buffer   = Buffer.from(await file.arrayBuffer());
-  const hash     = createHash('sha256').update(buffer).digest('hex').slice(0, 16);
-  const cacheKey = `scaled-${maxPx}-${hash}`;
-  if (scaledCache.has(cacheKey)) {
-    return { data: scaledCache.get(cacheKey), mimeType: 'image/png', hash };
+async function processLogoFile(file, maxPx = 280) {
+  const buffer = Buffer.from(await file.arrayBuffer());
+  const hash   = createHash('sha256').update(buffer).digest('hex').slice(0, 16);
+
+  // ── Scaled image for Gemini ──────────────────────────────────────────────
+  const scaleCacheKey = `scaled-${maxPx}-${hash}`;
+  let scaledData, mimeType;
+  if (scaledCache.has(scaleCacheKey)) {
+    scaledData = scaledCache.get(scaleCacheKey);
+    mimeType   = 'image/png';
+  } else {
+    try {
+      const resized = await sharp(buffer)
+        .resize(maxPx, maxPx, { fit: 'inside', withoutEnlargement: true })
+        .png()
+        .toBuffer();
+      scaledData = resized.toString('base64');
+      mimeType   = 'image/png';
+    } catch {
+      scaledData = buffer.toString('base64');
+      mimeType   = file.type || 'image/png';
+    }
+    scaledCache.set(scaleCacheKey, scaledData);
   }
-  try {
-    const resized = await sharp(buffer)
-      .resize(maxPx, maxPx, { fit: 'inside', withoutEnlargement: true })
-      .png()
-      .toBuffer();
-    const b64 = resized.toString('base64');
-    scaledCache.set(cacheKey, b64);
-    return { data: b64, mimeType: 'image/png', hash };
-  } catch {
-    const b64 = buffer.toString('base64');
-    return { data: b64, mimeType: file.type || 'image/png', hash };
+
+  // ── Shape analysis (cached by content hash) ──────────────────────────────
+  let shape;
+  if (shapeCache.has(hash)) {
+    shape = shapeCache.get(hash);
+  } else {
+    shape = await analyseLogoShape(buffer);
+    shapeCache.set(hash, shape);
+    console.log(`Logo shape [${hash.slice(0,8)}]: AR=${shape.ar.toFixed(2)} → ${shape.shapeDesc} (${Math.round(shape.minScale*100)}–${Math.round(shape.maxScale*100)}%)`);
   }
+
+  return { data: scaledData, mimeType, hash, shape };
 }
 
 // ── Result cache ───────────────────────────────────────────────────────────
@@ -472,6 +507,30 @@ export async function POST(request) {
     const rightFile = formData.get('design_right');
     const rearFile  = formData.get('design_rear');
 
+    if (!frontFile || frontFile.size === 0) {
+      return jsonError('Missing front design.', 400);
+    }
+
+    // ── Process all logo files (scale + shape analysis in one pass) ───────
+    const frontImg   = await processLogoFile(frontFile, 420);
+    const logoHashes = { front: frontImg.hash };
+
+    // Front 3/4 right view → RIGHT side logo visible
+    // Rear 3/4 left view  → LEFT side + rear logos visible
+    let rightImg = null, leftImg = null, rearImg = null;
+    if (viewAngle === 'front' && rightFile?.size > 0) {
+      rightImg = await processLogoFile(rightFile, 280);
+      logoHashes.right = rightImg.hash;
+    }
+    if (viewAngle === 'rear' && leftFile?.size > 0) {
+      leftImg = await processLogoFile(leftFile, 280);
+      logoHashes.left = leftImg.hash;
+    }
+    if (viewAngle === 'rear' && rearFile?.size > 0) {
+      rearImg = await processLogoFile(rearFile, 280);
+      logoHashes.rear = rearImg.hash;
+    }
+
     const settings = {
       colors: {
         front: formData.get('color_front') || '#1a1a1a',
@@ -482,24 +541,28 @@ export async function POST(request) {
       stripeColor:   formData.get('stripeColor')   || '#ffffff',
       sandwichBrim:  formData.get('sandwichBrim')  === 'true',
       sandwichColor: formData.get('sandwichColor') || '#c2410c',
-      hasLeft:       !!leftFile  && leftFile.size  > 0,
-      hasRight:      !!rightFile && rightFile.size > 0,
-      hasRear:       !!rearFile  && rearFile.size  > 0,
-      leftLogoName:  leftFile?.name  || '',
-      rightLogoName: rightFile?.name || '',
+      hasLeft:       !!leftImg,
+      hasRight:      !!rightImg,
+      hasRear:       !!rearImg,
+      // Shape data from real pixel analysis — drives scale % in the prompts
+      rightShape:    rightImg?.shape || null,
+      leftShape:     leftImg?.shape  || null,
       variationSeed: Number(formData.get('variationSeed') || 0),
     };
-
-    if (!frontFile || frontFile.size === 0) {
-      return jsonError('Missing front design.', 400);
-    }
 
     const autoStripeCount = mode === 'auto' ? settings.variationSeed % 4 : settings.stripeCount;
     const effectiveSettings = mode === 'auto'
       ? { ...settings, stripeCount: autoStripeCount }
       : settings;
 
-    // ── Build prompt based on view angle and mode ─────────────────────────
+    // ── Result cache check ────────────────────────────────────────────────
+    const cacheKey = buildCacheKey(mode, viewAngle, logoHashes, effectiveSettings);
+    if (resultCache.has(cacheKey)) {
+      console.log('Cache hit:', cacheKey.slice(0, 40));
+      return Response.json(resultCache.get(cacheKey));
+    }
+
+    // ── Build prompt ──────────────────────────────────────────────────────
     let prompt;
     if (viewAngle === 'rear') {
       prompt = mode === 'auto'
@@ -509,33 +572,6 @@ export async function POST(request) {
       prompt = mode === 'auto'
         ? buildFrontAutoPrompt(effectiveSettings)
         : buildFrontProductPrompt(effectiveSettings);
-    }
-
-    // ── Scale logos ───────────────────────────────────────────────────────
-    const frontImg = await fileToBase64Scaled(frontFile, 420);
-    const logoHashes = { front: frontImg.hash };
-
-    // Front 3/4 right view → RIGHT side logo visible
-    // Rear 3/4 left view  → LEFT side + rear logos visible
-    let rightImg = null, leftImg = null, rearImg = null;
-    if (viewAngle === 'front' && settings.hasRight) {
-      rightImg = await fileToBase64Scaled(rightFile, 280);
-      logoHashes.right = rightImg.hash;
-    }
-    if (viewAngle === 'rear' && settings.hasLeft) {
-      leftImg = await fileToBase64Scaled(leftFile, 280);
-      logoHashes.left = leftImg.hash;
-    }
-    if (viewAngle === 'rear' && settings.hasRear) {
-      rearImg = await fileToBase64Scaled(rearFile, 280);
-      logoHashes.rear = rearImg.hash;
-    }
-
-    // ── Result cache check ────────────────────────────────────────────────
-    const cacheKey = buildCacheKey(mode, viewAngle, logoHashes, effectiveSettings);
-    if (resultCache.has(cacheKey)) {
-      console.log('Cache hit:', cacheKey.slice(0, 40));
-      return Response.json(resultCache.get(cacheKey));
     }
 
     // ── Pick the correct reference cap photo ──────────────────────────────
@@ -567,42 +603,27 @@ export async function POST(request) {
 
     // ── Assemble Gemini parts ─────────────────────────────────────────────
     const parts = [];
-
     if (refPart) parts.push(refPart);
 
     if (viewAngle === 'front') {
-      // Front 3/4 right: ref cap (1), front logo (2), right logo (3 if any)
       const imageRefs = settings.hasRight
         ? 'Image 1 is the REFERENCE CAP to edit. Image 2 is the FRONT PANEL LOGO. Image 3 is the RIGHT SIDE DESIGN. '
         : 'Image 1 is the REFERENCE CAP to edit. Image 2 is the FRONT PANEL LOGO. ';
       parts.push({ text: imageRefs + prompt });
       parts.push({ inlineData: { mimeType: frontImg.mimeType, data: frontImg.data } });
-      if (rightImg) {
-        parts.push({ inlineData: { mimeType: rightImg.mimeType, data: rightImg.data } });
-      }
+      if (rightImg) parts.push({ inlineData: { mimeType: rightImg.mimeType, data: rightImg.data } });
     } else {
-      // Rear 3/4 left: ref cap (1), front logo as brand ref (2), rear logo (3), left logo (4)
       const logoLabels = ['Image 1 is the REFERENCE CAP to edit.'];
       let imgIdx = 2;
       logoLabels.push(`Image ${imgIdx} is the FRONT LOGO for brand colour reference ONLY — do NOT embroider it on this rear view.`);
       imgIdx++;
-      if (settings.hasRear) {
-        logoLabels.push(`Image ${imgIdx} is the REAR LOGO.`);
-        imgIdx++;
-      }
-      if (settings.hasLeft) {
-        logoLabels.push(`Image ${imgIdx} is the LEFT SIDE DESIGN.`);
-        imgIdx++;
-      }
+      if (settings.hasRear) { logoLabels.push(`Image ${imgIdx} is the REAR LOGO.`);        imgIdx++; }
+      if (settings.hasLeft) { logoLabels.push(`Image ${imgIdx} is the LEFT SIDE DESIGN.`); imgIdx++; }
 
       parts.push({ text: logoLabels.join(' ') + ' ' + prompt });
       parts.push({ inlineData: { mimeType: frontImg.mimeType, data: frontImg.data } });
-      if (rearImg) {
-        parts.push({ inlineData: { mimeType: rearImg.mimeType, data: rearImg.data } });
-      }
-      if (leftImg) {
-        parts.push({ inlineData: { mimeType: leftImg.mimeType, data: leftImg.data } });
-      }
+      if (rearImg) parts.push({ inlineData: { mimeType: rearImg.mimeType, data: rearImg.data } });
+      if (leftImg) parts.push({ inlineData: { mimeType: leftImg.mimeType, data: leftImg.data } });
     }
 
     // ── Call Gemini ────────────────────────────────────────────────────────
@@ -636,9 +657,7 @@ export async function POST(request) {
 
     if (!imageBase64) {
       console.error('No image in response. Parts:', JSON.stringify(responseParts?.map(p => ({
-        hasText: !!p.text,
-        hasInlineData: !!p.inlineData,
-        thought: p.thought,
+        hasText: !!p.text, hasInlineData: !!p.inlineData, thought: p.thought,
       }))));
       return jsonError('Preview creation failed — no image returned. Please try again.', 502);
     }
