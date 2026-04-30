@@ -30,7 +30,7 @@ const PLACEMENTS = {
 LEFT: {
   anchor: 'mesh',
   position: 0.58, // pushed forward near brim
-  scale: [0.22, 0.30],
+  scale: [0.20, 0.25],
 
   vertical: {
     overlap: [0.50, 0.65],
@@ -40,9 +40,9 @@ LEFT: {
 
   RIGHT: {
     anchor: 'front',
-    position: 0.66,
+    position: 0.62,
 
-    scale: [0.32, 0.42],
+    scale: [0.30, 0.40],
 
     vertical: {
       overlap: [0.35, 0.45],
