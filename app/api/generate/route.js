@@ -800,22 +800,21 @@ export async function POST(request) {
     parts.push({ inlineData: { mimeType: 'image/jpeg', data: refCapB64 } });
 
     if (viewAngle === 'front') {
-      // Front view: ref cap (1), front logo (2), right side logo (3 if any)
+      // Front view: text labels first, then images in order
       const imageRefs = settings.hasRight
         ? 'Image 1 is the REFERENCE CAP to edit. Image 2 is the FRONT PANEL LOGO. Image 3 is the RIGHT SIDE LOGO. '
         : 'Image 1 is the REFERENCE CAP to edit. Image 2 is the FRONT PANEL LOGO. ';
-      parts.push({ text: imageRefs + prompt });
+      // Insert text BEFORE the reference cap image so Gemini reads label → image → label → image
+      parts.unshift({ text: imageRefs + prompt }); // move to front, ref cap image already pushed
       parts.push({ inlineData: { mimeType: frontImg.mimeType, data: frontImg.data } });
       if (rightImg) parts.push({ inlineData: { mimeType: rightImg.mimeType, data: rightImg.data } });
     } else {
-      // Rear view: ref cap (1), rear logo (2 if any), left side logo (next if any)
-      // NOTE: The front logo is NOT sent for rear view — it was causing Gemini to
-      // place it on the side panel. Colours come from the product prompt directly.
+      // Rear view: text labels first, then images in order
       const logoLabels = ['Image 1 is the REFERENCE CAP to edit.'];
       let imgIdx = 2;
       if (settings.hasRear) { logoLabels.push(`Image ${imgIdx} is the REAR PANEL LOGO.`); imgIdx++; }
       if (settings.hasLeft) { logoLabels.push(`Image ${imgIdx} is the LEFT SIDE LOGO.`); imgIdx++; }
-      parts.push({ text: logoLabels.join(' ') + ' ' + prompt });
+      parts.unshift({ text: logoLabels.join(' ') + ' ' + prompt }); // move to front
       // Do NOT push frontImg for rear view
       if (rearImg)  parts.push({ inlineData: { mimeType: rearImg.mimeType,  data: rearImg.data  } });
       if (leftImg)  parts.push({ inlineData: { mimeType: leftImg.mimeType,  data: leftImg.data  } });
