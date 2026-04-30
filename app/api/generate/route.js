@@ -29,7 +29,7 @@ const PLACEMENTS = {
 
   LEFT: {
     anchor: 'rear',
-    position: 0.60, // horizontal placement (back-biased)
+    position: 0.45, // horizontal placement (back-biased)
 
     // ↓ adjusted smaller for rear view balance
     scale: [0.22, 0.30],
@@ -221,7 +221,7 @@ if (s.hasLeft) {
   const vOffset = getVerticalOffset(type);
 
   logoLines.push(
-    `Image ${imgIndex} is the LEFT SIDE DESIGN. Place it on the left mesh panel in the rear-lower quadrant, anchored near the rear seam, center ~${Math.round(PLACEMENTS.LEFT.position * 100)}% from the rear seam (strong back-bias).
+    `Image ${imgIndex} is the LEFT SIDE DESIGN. Place it on the left mesh panel in the rear-lower quadrant, positioned forward toward the front seam and closer to the brim, center ~${Math.round(PLACEMENTS.LEFT.position * 100)}% from the rear seam.
 
 The lower portion of the logo must overlap the stripe band, with approximately ${Math.round(v.overlap[0]*100)}–${Math.round(v.overlap[1]*100)}% of the logo height intersecting the stripes. Vertical placement is determined relative to the stripe band, not the panel center, with a slight downward bias for visual balance.
 
@@ -303,7 +303,7 @@ function buildRearAutoPrompt(s) {
   const vOffset = getVerticalOffset(type);
 
   logoLines.push(
-    `Image ${imgIndex} is the LEFT SIDE DESIGN. Place it on the left mesh panel in the rear-lower quadrant, anchored near the rear seam, center ~${Math.round(PLACEMENTS.LEFT.position * 100)}% from the rear seam (strong back-bias).
+    `Image ${imgIndex} is the LEFT SIDE DESIGN. Place it on the left mesh panel in the rear-lower quadrant, positioned forward toward the front seam and closer to the brim, center ~${Math.round(PLACEMENTS.LEFT.position * 100)}% from the rear seam.
 
 The lower portion of the logo must overlap the stripe band, with approximately ${Math.round(v.overlap[0]*100)}–${Math.round(v.overlap[1]*100)}% of the logo height intersecting the stripes. Vertical placement is determined relative to the stripe band, not the panel center, with a slight downward bias for visual balance.
 
