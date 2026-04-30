@@ -52,7 +52,7 @@ const PLACEMENTS = {
   RIGHT: {
     anchor: 'front',
     position: 0.62,
-    scale: [0.30, 0.40],
+    scale: [0.25, 0.35],
     vertical: {
       overlap: [0.35, 0.45],
       baseOffset: -0.03,
@@ -817,7 +817,7 @@ export async function POST(request) {
         responseModalities: ['TEXT', 'IMAGE'],
         imageConfig: {
           aspectRatio: '1:1',
-          imageSize: '1k',
+          imageSize: '512',
         },
       },
     });
