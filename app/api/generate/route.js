@@ -17,6 +17,9 @@ import { put } from '@vercel/blob';
 import { headers } from 'next/headers';
 import { createHash } from 'crypto';
 import sharp from 'sharp';
+import fs from 'fs';
+import path from 'path';
+
 
 // ============================================================================
 // PROMPT TEMPLATES
@@ -132,38 +135,58 @@ const direction = directions[s.variationSeed % directions.length];
 
 const stripeNote =
 s.stripeCount > 0
-? `Include ${s.stripeCount} clean, premium stripe(s) on the side panel using a colour derived ONLY from the front logo.`
+? `Include EXACTLY ${s.stripeCount} clean, evenly spaced vertical stripe(s) on the VISIBLE mesh side panel only. Stripes must run front-to-back along the side mesh panel, not curved, not angled, and not on the front panel. Use a colour derived ONLY from the front logo.`
 : 'Do not include any side stripes.';
 
 const logoLines = [];
-let imgIndex = 3; // Image 2 = FRONT LOGO
+let imgIndex = 3;
 
 if (s.hasRight) {
 logoLines.push(
-`Image ${imgIndex} is the RIGHT SIDE LOGO. Place it small and clean on the right panel as an accent.`
+`Image ${imgIndex} is the RIGHT SIDE LOGO. Place it small, clean, and horizontally aligned on the right side panel. Do not distort or recolour it.`
 );
 imgIndex++;
 }
 
 return [
 'You are generating a premium custom trucker cap mockup (front 3/4 right view).',
-'The cap must look realistic, production-ready, and high-end.',
+'',
+'STRICT CAP CONSTRUCTION RULES:',
+'- 5-panel trucker cap structure',
+'- Solid front panel (fabric)',
+'- Mesh side and rear panels',
+'- Curved brim',
+'- Visible stitching and seam lines must be realistic',
+'',
+'PANEL COLOUR RULES:',
+'- Front panel, mesh, and brim must follow a cohesive palette',
+'- No random colours or gradients',
+'- No multi-colour patchwork unless explicitly implied by the logo',
 '',
 'Image 1 is the blank cap.',
 'Image 2 is the FRONT LOGO.',
 ...logoLines,
 '',
-'Analyse the logo in Image 2. Based on its colours, style, and brand aesthetic, choose the ideal cap colours.',
-'IMPORTANT: Use ONLY the colours from Image 2 (the FRONT logo). Do NOT derive colours from any other logos.',
+'Analyse ONLY Image 2 (the FRONT logo).',
+'IMPORTANT: Use ONLY the colours from Image 2. Do NOT derive colours from any other logos.',
 direction,
+'',
+'EMBROIDERY RULES:',
+'- Front logo must be centred on the front panel',
+'- Maintain correct proportions and padding',
+'- Do not stretch, recolour, or stylise the logo',
+'- Use realistic embroidery stitching depth',
 '',
 stripeNote,
 '',
-'Ensure all panels (front, mesh, brim) follow a cohesive and consistent colour palette.',
-'The colour palette must remain IDENTICAL between all views generated for this cap.',
+'CONSISTENCY RULE:',
+'- The colour palette and construction must remain IDENTICAL between all generated views',
 '',
-'Lighting should be studio-quality with soft shadows and realistic fabric texture.',
-'Maintain correct embroidery depth, stitching realism, and material separation.',
+'OUTPUT STYLE:',
+'- Studio lighting',
+'- Soft shadows',
+'- Realistic fabric texture',
+'- High-end product photography look',
 ].join(' ');
 }
 
@@ -183,45 +206,64 @@ const direction = directions[s.variationSeed % directions.length];
 
 const stripeNote =
 s.stripeCount > 0
-? `Include ${s.stripeCount} clean, premium stripe(s) on the side panel using a colour derived ONLY from the front logo.`
+? `Include EXACTLY ${s.stripeCount} clean, evenly spaced vertical stripe(s) on the LEFT side panel only. Stripes must run front-to-back along the side panel, not curved, not angled, and not on the rear panel. Use a colour derived ONLY from the front logo.`
 : 'Do not include any side stripes.';
 
 const logoLines = [];
-let imgIndex = 3; // Image 2 = FRONT LOGO
+let imgIndex = 3;
 
 if (s.hasRear) {
 logoLines.push(
-`Image ${imgIndex} is the REAR LOGO. Place it cleanly on the rear panel with correct embroidery scaling and alignment.`
+`Image ${imgIndex} is the REAR LOGO. Place it centred on the rear panel above the closure area. Keep it small and clean.`
 );
 imgIndex++;
 }
 
 if (s.hasLeft) {
 logoLines.push(
-`Image ${imgIndex} is the LEFT SIDE LOGO. Place it small and clean on the left panel as an accent.`
+`Image ${imgIndex} is the LEFT SIDE LOGO. Place it small and aligned on the left panel as an accent.`
 );
 imgIndex++;
 }
 
 return [
 'You are generating a premium custom trucker cap mockup (rear 3/4 left view).',
-'The cap must look realistic, production-ready, and high-end.',
+'',
+'STRICT CAP CONSTRUCTION RULES:',
+'- 5-panel trucker cap structure',
+'- Solid front panel (fabric)',
+'- Mesh side and rear panels',
+'- Curved brim',
+'- Visible stitching and seam lines must be realistic',
+'',
+'PANEL COLOUR RULES:',
+'- Front panel, mesh, and brim must follow a cohesive palette',
+'- Must match the front view exactly',
+'- No random colours or gradients',
 '',
 'Image 1 is the blank cap.',
 'Image 2 is the FRONT LOGO.',
 ...logoLines,
 '',
-'Analyse the logo in Image 2. Based on its colours, style, and brand aesthetic, choose the ideal cap colours.',
-'IMPORTANT: Use ONLY the colours from Image 2 (the FRONT logo). Do NOT derive colours from any other logos.',
+'Analyse ONLY Image 2 (the FRONT logo).',
+'IMPORTANT: Use ONLY the colours from Image 2. Do NOT derive colours from any other logos.',
 direction,
+'',
+'EMBROIDERY RULES:',
+'- Rear logo must be centred and scaled appropriately',
+'- Left logo must remain small and clean',
+'- Do not distort or recolour logos',
 '',
 stripeNote,
 '',
-'Ensure all panels (front, mesh, brim) follow a cohesive and consistent colour palette.',
-'The colour palette must remain IDENTICAL between all views generated for this cap.',
+'CONSISTENCY RULE:',
+'- This render must match the same cap design as the front view (same colours, materials, and structure)',
 '',
-'Lighting should be studio-quality with soft shadows and realistic fabric texture.',
-'Maintain correct embroidery depth, stitching realism, and material separation.',
+'OUTPUT STYLE:',
+'- Studio lighting',
+'- Soft shadows',
+'- Realistic fabric texture',
+'- High-end product photography look',
 ].join(' ');
 }
 
@@ -388,18 +430,25 @@ export async function POST(request) {
 
     const host     = headersList.get('host') || 'localhost:3000';
     const protocol = host.includes('localhost') ? 'http' : 'https';
-    const refUrl   = `${protocol}://${host}/${refFilename}`;
+    import fs from 'fs';
+    import path from 'path';
 
+    // Replace fetch-based reference loading with direct file read
     let refPart = null;
     try {
-      const refResp = await fetch(refUrl);
-      if (refResp.ok) {
-        const refBuffer = Buffer.from(await refResp.arrayBuffer());
-        refPart = { inlineData: { mimeType: 'image/jpeg', data: refBuffer.toString('base64') } };
-      }
-    } catch {
-      console.warn('Could not fetch reference cap:', refFilename);
-    }
+    const filePath = path.join(process.cwd(), 'public', refFilename);
+    const refBuffer = fs.readFileSync(filePath);
+
+    refPart = {
+    inlineData: {
+    mimeType: 'image/jpeg',
+    data: refBuffer.toString('base64'),
+    },
+    };
+    } catch (err) {
+    console.warn('Could not load reference cap from filesystem:', refFilename, err);
+   }
+
 
     // ── Assemble Gemini parts ─────────────────────────────────────────────
     const parts = [];
