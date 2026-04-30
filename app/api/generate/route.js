@@ -384,7 +384,7 @@ export async function POST(request) {
       // Rear 3/4 left: ref cap (1), front logo as brand ref (2), rear logo (3), left logo (4)
       const logoLabels = ['Image 1 is the REFERENCE CAP to edit.'];
       let imgIdx = 2;
-      logoLabels.push(`Image ${imgIdx} is the FRONT LOGO for brand colour reference only — do NOT embroider it on this rear view.`);
+      logoLabels.push(`Image ${imgIdx} is the FRONT LOGO for brand colour reference ONLY — do NOT embroider it on this rear view.`);
       imgIdx++;
       if (settings.hasRear) {
         logoLabels.push(`Image ${imgIdx} is the REAR LOGO.`);
