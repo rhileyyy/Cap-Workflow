@@ -24,7 +24,7 @@ import sharp from 'sharp';
 
 const PROMPT_FRONT = {
   subject: 'Edit Image 1, which is a photograph of a blank grey trucker cap shown from a front 3/4 right angle. Keep the cap shape, construction, angle, lighting, mesh texture, brim shape, and stripe placement EXACTLY as they are in Image 1. Do NOT reimagine or redraw the cap. Only make the colour and embroidery changes described below.',
-  construction: 'Preserve from Image 1 exactly: the high crown shape, single-piece structured front panel, mesh rear panels, brim curve, squatchee button, snapback closure, and the stripe count and placement. Stripes are decorative surface elements, not seams. Keep them fixed. Embroidery sits over with a tight consistent gap. Do not add or remove stripes. Do not change the brim shape. No topstitching on the brim.',
+  construction: 'Preserve from Image 1 exactly: the high crown shape, single-piece structured front panel, mesh rear panels, brim curve, squatchee button, snapback closure, and the stripe count and placement. Stripes are decorative surface elements, not seams. Keep them fixed. Embroidery sits ON TOP of stripes. Each stripe must remain visually separate and evenly spaced — do not combine or blur them together. Do not change the brim shape. No topstitching on the brim.',
   embroidery: 'All logos are raised 3D embroidery with visible stitching.',
   logoLockdown: 'Image 2 is the front logo. Embroider it centered on the front panel exactly as provided (no changes). Scale to exactly 42% of panel width (max 46%, min 38%) with even margins and clear spacing from seams.',
   avoid: 'Do not alter cap structure, geometry, materials, stripes, or camera angle. No extra elements or people.',
@@ -32,7 +32,7 @@ const PROMPT_FRONT = {
 
 const PROMPT_REAR = {
   subject: 'Edit Image 1, which is a photograph of a blank grey trucker cap shown from a rear 3/4 left angle (looking at the back of the cap from the left side). Keep the EXACT same camera angle, perspective, and composition as Image 1 — do NOT rotate the cap or change the viewing angle. Keep the cap shape, construction, lighting, mesh texture, brim shape, snapback closure, and stripe placement EXACTLY as they are in Image 1. Do NOT reimagine or redraw the cap. Only make the colour and embroidery changes described below.',
-  construction: 'Preserve from Image 1 exactly: the high crown shape, single-piece structured front panel, mesh rear panels, brim curve, squatchee button, snapback closure, and the stripe count and placement. Stripes are decorative surface elements, not seams. Keep them fixed. Embroidery sits over with a tight consistent gap. Do not add or remove stripes. Do not change the brim shape. No topstitching on the brim.',
+  construction: 'Preserve from Image 1 exactly: the high crown shape, single-piece structured front panel, mesh rear panels, brim curve, squatchee button, snapback closure, and the stripe count and placement. Stripes are decorative surface elements, not seams. Keep them fixed. Embroidery sits ON TOP of stripes. Each stripe must remain visually separate and evenly spaced — do not combine or blur them together. Do not change the brim shape. No topstitching on the brim.',
   embroidery: 'All logos are raised 3D embroidery with visible stitching.',
   avoid: 'Do not alter cap structure, geometry, materials, stripes, or camera angle. No extra elements or people.',
 };
@@ -80,7 +80,7 @@ function buildFrontProductPrompt(s) {
     : `Change the stripe colour to ${describeColor(s.stripeColor)}. Keep the stripes exactly AS IS in Image 1 — do NOT move them, Stripes are purely decorative surface elements and are NOT seams, joins, or panel boundaries. Do not interpret stripes as construction lines.`;
 
   const rightLogoLine = s.hasRight
-    ? `Image 3 is the RIGHT SIDE DESIGN. Place it on the right mesh panel in the rear half, center ~66% from the front seam (back-biased). Vertically centered, bottom just above the stripe with a tight gap (no overlap). Scale ~32–42% of panel width, adjusted for matching visual weight. Do not touch seams. Keep placement and scale consistent across views. Raised embroidery over mesh, in front of stripes.`
+    ? `Image 3 is the RIGHT SIDE DESIGN. Place it on the right mesh panel in the rear half, anchored near the seam between the front panel and mesh, with center ~66% from the front seam (back-biased, not centered). Vertically centered, bottom just above the stripe with a tight gap (no overlap). Scale ~32–42% of panel width, adjusted for visual balance. Do not touch seams. Keep placement consistent across views. Raised embroidery over mesh and stripes.`
     : '';
 
   return [P.subject, P.construction, colourLine, stripeLine, P.embroidery, P.logoLockdown, rightLogoLine, P.avoid].filter(Boolean).join(' ');
@@ -102,12 +102,13 @@ function buildRearProductPrompt(s) {
   let imgIndex = 2;
 
   if (s.hasRear) {
-    logoLines.push(`Image ${imgIndex} is the REAR LOGO. Embroider it on the centre back of the cap above the snapback closure — same shapes, same text, same proportions, same colours. The 3D embroidery should be SMALL — a small accent badge, approximately 1/4 to 1/5 the size of a front panel logo. Raised 3D high detail embroidery with visible stitches. Do NOT scale it to fill the back panel.`);
-    imgIndex++;
+  logoLines.push(`Image ${imgIndex} is the REAR LOGO. Place it centered on the back of the cap above the snapback closure. Scale SMALL (~20–25% of front logo size). Raised 3D embroidery with visible stitching. Do not fill the panel.`);
+  imgIndex++;
   }
+
   if (s.hasLeft) {
-    logoLines.push(`Image ${imgIndex} is the LEFT SIDE DESIGN. Place it on the left mesh panel in the rear half, center ~38% from the rear seam (back-biased). Vertically centered, bottom just above the stripe with a tight gap (no overlap). Scale ~32–42% of panel width, adjusted for matching visual weight. Do not touch seams. Keep placement and scale consistent across views. Raised embroidery over mesh, in front of stripes.`);
-    imgIndex++;
+  logoLines.push(`Image ${imgIndex} is the LEFT SIDE DESIGN. Place it on the left mesh panel in the rear half, anchored near the rear seam, with center ~38% from the rear seam (back-biased, not centered). Vertically centered, bottom overlapping stripes. Scale ~32–42% of panel width, adjusted for visual balance. Do not touch seams. Keep placement consistent across views. Raised embroidery over mesh and stripes.`);
+  imgIndex++;
   }
 
   logoLines.push('IMPORTANT: Only place embroidery on the parts of the cap that are visible in Image 1. Do NOT invent a different camera angle. The output must match Image 1\'s exact viewing angle.');
@@ -135,7 +136,7 @@ function buildFrontAutoPrompt(s) {
     : 'The reference cap has no stripes — keep it that way.';
 
   const rightInstruction = s.hasRight
-  ? `Image 3 is the RIGHT SIDE DESIGN. Place it on the right mesh panel in the rear half, center ~66% from the front seam (back-biased). Vertically centered, bottom just above the stripe with a tight gap (no overlap). Scale ~32–42% of panel width, adjusted for matching visual weight. Keep placement consistent across views. Raised embroidery over mesh, in front of stripes.`
+  ? `Image 3 is the RIGHT SIDE DESIGN. Place it on the right mesh panel in the rear half, anchored near the seam between the front panel and mesh, with center ~66% from the front seam (back-biased, not centered). Vertically centered, bottom overlapping stripes. Scale ~32–42% of panel width, adjusted for visual balance. Do not touch seams. Keep placement consistent across views. Raised embroidery over mesh and stripes.`
   : '';
 
   return [
@@ -174,7 +175,7 @@ function buildRearAutoPrompt(s) {
     imgIndex++;
   }
   if (s.hasLeft) {
-logoLines.push(`Image ${imgIndex} is the LEFT SIDE DESIGN. Place it on the left mesh panel in the rear half, center ~38% from the rear seam (back-biased). Vertically centered, bottom just above the stripe with a tight gap (no overlap). Scale ~32–42% of panel width, adjusted for matching visual weight. Keep placement consistent across views. Raised embroidery over mesh, in front of stripes.`);
+logoLines.push(`Image ${imgIndex} is the LEFT SIDE DESIGN. Place it on the left mesh panel in the rear half, center ~38% from the rear seam (back-biased). Vertically centered, bottom overlapping stripes. Scale ~32–42% of panel width, adjusted for matching visual weight. Keep placement consistent across views. Raised embroidery over mesh and stripes.`);
    imgIndex++;
   }
 
