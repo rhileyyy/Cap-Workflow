@@ -111,7 +111,7 @@ const PROMPT_FRONT = {
   subject: 'Edit Image 1, which is a photograph of a blank grey trucker cap shown from a front 3/4 right angle. Keep the cap shape, construction, angle, lighting, mesh texture, brim shape, and stripe placement EXACTLY as they are in Image 1. Do NOT reimagine or redraw the cap. Only make the colour and embroidery changes described below.',
   construction: 'Preserve from Image 1 exactly: the high crown shape, single-piece structured front panel, mesh rear panels, brim curve, squatchee button, snapback closure, and the stripe count and placement. Do not add or remove stripes. Do not change the brim shape. No topstitching on the brim.',
   embroidery: `All logos are rendered as 3D high detail embroidery raised above the cap surface. Black outlined embroidery on all positions. Individual thread stitches clearly visible. Each embroidered element casts a shadow onto the fabric beneath it. Adjust scale for optical balance so thin/script logos appear slightly larger and compact logos slightly smaller.`,
-  logoLockdown: 'Image 2 is the front logo. Embroider it centered on the front panel exactly as provided. Scale to exactly 42% of panel width (min 38%, max 46%) with even margins and clear spacing from seams.',
+  logoLockdown: 'Image 2 is the front logo. Use this image ONLY for the front panel. Do NOT reuse this logo on the sides or rear of the cap. Embroider it centered on the front panel exactly as provided. Scale to exactly 42% of panel width (min 38%, max 46%) with even margins and clear spacing from seams.',
   avoid: 'Do not change the cap shape or construction. Do NOT add parts. Do NOT repeat logo embroiders.Preserve the EXACT stripe count, thickness, spacing, curvature, and position from Image 1. Stripes must remain separate and fully visible. Stripes exist only on side panels and must NOT appear on the brim. Side embroidery is allowed to overlap and sit on top of the stripes. Do not add topstitching to the brim. Do not change the mesh. Do not add a model or person. Do not change the background colour.',
 };
 
@@ -207,7 +207,7 @@ function buildRearProductPrompt(s) {
   let imgIndex = 2;
 
   if (s.hasRear) {
-    logoLines.push(`Image ${imgIndex} is the REAR LOGO. Embroider it on the centre back of the cap above the snapback closure — same shapes, same text, same proportions, same colours. The 3D embroidery should be SMALL — a small accent badge, approximately 1/4 to 1/5 the size of a front panel logo. Raised 3D high detail embroidery with visible stitches. Do NOT scale it to fill the back panel.`);
+    logoLines.push(`Image ${imgIndex} is the REAR LOGO. Use this image ONLY for the rear of the cap above the snapback. Do NOT substitute or reuse any other logo. Embroider it centered above the closure. Scale SMALL (~18–22% of front logo size). Raised embroidery with visible stitching.`);
     imgIndex++;
   }
 if (s.hasLeft) {
