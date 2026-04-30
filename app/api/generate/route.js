@@ -106,8 +106,8 @@ function buildRearProductPrompt(s) {
     imgIndex++;
   }
   if (s.hasLeft) {
-    logoLines.push(`Image ${imgIndex} is the LEFT SIDE DESIGN. Reproduce it EXACTLY on the visible side mesh panel in foreground — every shape, letter, colour, and detail must match precisely. The 3D embroidery is SEWN OVER THE TOP OF any stripes — the logo sits in the foreground, stripes in the background, partially covered by the embroidery. Raised 3D embroidery with visible stitches. The side design must be embroidered SMALL — approximately 1/3 to 1/3 the size of a front panel logo. Do NOT scale it to fill the mesh panel.`);
-    imgIndex++;
+    logoLines.push(`Image ${imgIndex} is the LEFT SIDE DESIGN. Reproduce it EXACTLY on the left side mesh panel, positioned on the panel directly forward of the rear seam (closest to the snapback), vertically centered within the mesh height, with the bottom of the embroidery sitting just above the stripe band leaving a small consistent gap (do not overlap the stripe), and horizontally biased slightly toward the rear seam rather than centered; the embroidery is sewn over the mesh and sits visually in front of any stripes; maintain SMALL scale at approximately 1/3 to 1/2 the size of the front panel logo and do NOT scale it to fill the panel; maintain identical placement and scale consistency across all generated views.`);
+imgIndex++;
   }
 
   logoLines.push('IMPORTANT: Only place embroidery on the parts of the cap that are visible in Image 1. Do NOT invent a different camera angle. The output must match Image 1\'s exact viewing angle.');
@@ -174,8 +174,8 @@ function buildRearAutoPrompt(s) {
     imgIndex++;
   }
   if (s.hasLeft) {
-    logoLines.push(`Image ${imgIndex} is the LEFT SIDE DESIGN. Reproduce it EXACTLY on the left side mesh panel, positioned on the panel directly forward of the rear seam (closest to the snapback), vertically centered within the mesh height, with the bottom of the embroidery sitting just above the stripe band leaving a small consistent gap (do not overlap the stripe), and horizontally biased slightly toward the rear seam rather than centered; the embroidery is sewn over the mesh and sits visually in front of any stripes; maintain SMALL scale at approximately 1/3 to 1/2 the size of the front panel logo and do NOT scale it to fill the panel; maintain identical placement and scale consistency across all generated views.)`
-    imgIndex++;
+   logoLines.push(`Image ${imgIndex} is the LEFT SIDE DESIGN. Reproduce it EXACTLY on the left side mesh panel, positioned on the panel directly forward of the rear seam (closest to the snapback), vertically centered within the mesh height, with the bottom of the embroidery sitting just above the stripe band leaving a small consistent gap (do not overlap the stripe), and horizontally biased slightly toward the rear seam rather than centered; the embroidery is sewn over the mesh and sits visually in front of any stripes; maintain SMALL scale at approximately 1/3 to 1/2 the size of the front panel logo and do NOT scale it to fill the panel; maintain identical placement and scale consistency across all generated views.`);
+imgIndex++;
   }
 
   return [
