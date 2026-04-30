@@ -811,7 +811,7 @@ export async function POST(request) {
         responseModalities: ['TEXT', 'IMAGE'],
         imageConfig: {
           aspectRatio: '1:1',
-          imageSize: '1k',
+          imageSize: '512',
         },
       },
     });
