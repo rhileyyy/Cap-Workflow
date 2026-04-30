@@ -27,19 +27,16 @@ const PLACEMENTS = {
     max: 0.46,
   },
 
-  LEFT: {
-    anchor: 'rear',
-    position: 0.45, // horizontal placement (back-biased)
+LEFT: {
+  anchor: 'mesh',
+  position: 0.58, // pushed forward near brim
+  scale: [0.22, 0.30],
 
-    // ↓ adjusted smaller for rear view balance
-    scale: [0.22, 0.30],
-
-    // ↓ NEW: vertical system (stripe-based anchoring)
-    vertical: {
-      overlap: [0.35, 0.45], // % of logo height overlapping stripe
-      baseOffset: -0.05      // slight downward bias from panel center
-    }
-  },
+  vertical: {
+    overlap: [0.50, 0.65],
+    baseOffset: -0.08
+  }
+},
 
   RIGHT: {
     anchor: 'front',
@@ -221,7 +218,7 @@ if (s.hasLeft) {
   const vOffset = getVerticalOffset(type);
 
   logoLines.push(
-    `Image ${imgIndex} is the LEFT SIDE DESIGN. Place it on the left mesh panel in the rear-lower quadrant, positioned forward toward the front seam and closer to the brim, center ~${Math.round(PLACEMENTS.LEFT.position * 100)}% from the rear seam.
+    `Image ${imgIndex} is the LEFT SIDE DESIGN. Place it on the left mesh panel in the rear-lower quadrant, positioned forward toward the front seam and closer to the brim, center ~${Math.round(PLACEMENTS.LEFT.position * 100)}% from the rear seam, positioned close to the front edge of the mesh panel near the brim, positioned close to the front edge of the mesh panel near the brim.
 
 The lower portion of the logo must overlap the stripe band, with approximately ${Math.round(v.overlap[0]*100)}–${Math.round(v.overlap[1]*100)}% of the logo height intersecting the stripes. Vertical placement is determined relative to the stripe band, not the panel center, with a slight downward bias for visual balance.
 
@@ -303,7 +300,7 @@ function buildRearAutoPrompt(s) {
   const vOffset = getVerticalOffset(type);
 
   logoLines.push(
-    `Image ${imgIndex} is the LEFT SIDE DESIGN. Place it on the left mesh panel in the rear-lower quadrant, positioned forward toward the front seam and closer to the brim, center ~${Math.round(PLACEMENTS.LEFT.position * 100)}% from the rear seam.
+    `Image ${imgIndex} is the LEFT SIDE DESIGN. Place it on the left mesh panel in the rear-lower quadrant, positioned forward toward the front seam and closer to the brim, center ~${Math.round(PLACEMENTS.LEFT.position * 100)}% from the rear seam, positioned close to the front edge of the mesh panel near the brim.
 
 The lower portion of the logo must overlap the stripe band, with approximately ${Math.round(v.overlap[0]*100)}–${Math.round(v.overlap[1]*100)}% of the logo height intersecting the stripes. Vertical placement is determined relative to the stripe band, not the panel center, with a slight downward bias for visual balance.
 
