@@ -428,11 +428,6 @@ export async function POST(request) {
         : stripeNum === 3 ? 'cap-3stripe.jpg'
         : 'cap-0stripe.jpg');
 
-    const host     = headersList.get('host') || 'localhost:3000';
-    const protocol = host.includes('localhost') ? 'http' : 'https';
-    import fs from 'fs';
-    import path from 'path';
-
     // Replace fetch-based reference loading with direct file read
     let refPart = null;
     try {
