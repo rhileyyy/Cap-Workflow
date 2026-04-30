@@ -111,7 +111,7 @@ const PROMPT_FRONT = {
   subject: 'Edit Image 1, which is a photograph of a blank grey trucker cap shown from a front 3/4 right angle. Keep the cap shape, construction, angle, lighting, mesh texture, brim shape, and stripe placement EXACTLY as they are in Image 1. Do NOT reimagine or redraw the cap. Only make the colour and embroidery changes described below.',
   construction: 'Preserve from Image 1 exactly: the high crown shape, single-piece structured front panel, mesh rear panels, brim curve, squatchee button, snapback closure, and the stripe count and placement. Do not add or remove stripes. Do not change the brim shape. No topstitching on the brim.',
   embroidery: `All logos are rendered as 3D high detail embroidery raised above the cap surface. Black outlined embroidery on all positions. Individual thread stitches clearly visible. Each embroidered element casts a shadow onto the fabric beneath it. Adjust scale for optical balance so thin/script logos appear slightly larger and compact logos slightly smaller.`,
-  logoLockdown: 'Image 2 is the front logo. Use this image ONLY for the front panel. Do NOT reuse this logo on the sides or rear of the cap. Embroider it centered on the front panel exactly as provided. Scale to exactly 42% of panel width (min 38%, max 46%) with even margins and clear spacing from seams.',
+  logoLockdown: 'Image 2 is the front logo. Use this image ONLY for the front panel. Do NOT reuse this logo on the sides or rear of the cap. Embroider it centered on the front panel exactly as provided. With even margins and clear spacing from seams.',
   avoid: 'Do not change the cap shape or construction. Do NOT add parts. Do NOT repeat logo embroiders.Preserve the EXACT stripe count, thickness, spacing, curvature, and position from Image 1. Stripes must remain separate and fully visible. Stripes exist only on side panels and must NOT appear on the brim. Side embroidery is allowed to overlap and sit on top of the stripes. Do not add topstitching to the brim. Do not change the mesh. Do not add a model or person. Do not change the background colour.',
 };
 
@@ -218,7 +218,7 @@ if (s.hasLeft) {
   const vOffset = getVerticalOffset(type);
 
   logoLines.push(
-    `Image ${imgIndex} is the LEFT SIDE DESIGN. Place it on the left mesh panel, positioned forward toward the front seam and closer to the brim, center ~${Math.round(PLACEMENTS.LEFT.position * 100)}% from the rear seam, positioned close to the front edge of the mesh panel near the brim.
+    `Image ${imgIndex} is the LEFT SIDE DESIGN. Place it on the left mesh panel, center ~${Math.round(PLACEMENTS.LEFT.position * 100)}% from the rear seam, positioned close to the front edge of the mesh panel near the brim.
 
 The lower portion of the logo must overlap the stripe band, with approximately ${Math.round(v.overlap[0]*100)}–${Math.round(v.overlap[1]*100)}% of the logo height intersecting the stripes. Vertical placement is determined relative to the stripe band, not the panel center, with a slight downward bias for visual balance.
 
@@ -300,7 +300,7 @@ function buildRearAutoPrompt(s) {
   const vOffset = getVerticalOffset(type);
 
   logoLines.push(
-    `Image ${imgIndex} is the LEFT SIDE DESIGN. Place it on the left mesh panel, positioned forward toward the front seam and closer to the brim, center ~${Math.round(PLACEMENTS.LEFT.position * 100)}% from the rear seam, positioned close to the front edge of the mesh panel near the brim.
+    `Image ${imgIndex} is the LEFT SIDE DESIGN. Place it on the left mesh panel, center ~${Math.round(PLACEMENTS.LEFT.position * 100)}% from the rear seam, positioned close to the front edge of the mesh panel near the brim.
 
 The lower portion of the logo must overlap the stripe band, with approximately ${Math.round(v.overlap[0]*100)}–${Math.round(v.overlap[1]*100)}% of the logo height intersecting the stripes. Vertical placement is determined relative to the stripe band, not the panel center, with a slight downward bias for visual balance.
 
