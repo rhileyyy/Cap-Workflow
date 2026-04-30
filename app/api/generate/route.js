@@ -88,31 +88,32 @@ function buildFrontProductPrompt(s) {
 
 // ── REAR VIEW — Product prompt (Choose Colours) ──────────────────────────
 // Rear 3/4 left angle — shows rear panel + LEFT side
-function buildRearProductPrompt(s) {
-  const P = PROMPT_REAR;
-  const front = describeColor(s.colors.front);
-  const mesh  = describeColor(s.colors.mesh);
-  const brim  = describeColor(s.colors.brim);
-  const colourLine = `Change the cap colours: make the front panel ${front}, the mesh ${mesh}, and the brim ${brim}.`
-    + (s.sandwichBrim ? ` Add a sandwich brim — a contrasting ${describeColor(s.sandwichColor)} layer visible along the underside edge of the brim.` : '');
-  const stripeLine = s.stripeCount === 0 ? ''
-    : `Change the stripe colour to ${describeColor(s.stripeColor)}. Keep the stripes exactly where they are in Image 1 — do not move them.`;
+function buildRearAutoPrompt(s) {
+  const directions = [...];
+
+  const direction = directions[s.variationSeed % directions.length];
+
+  const stripeNote = ...
 
   const logoLines = [];
-  let imgIndex = 2;
+  let imgIndex = 3; // ✅ FIXED
 
   if (s.hasRear) {
-    logoLines.push(`Image ${imgIndex} is the REAR LOGO. Embroider it on the centre back of the cap above the snapback closure — same shapes, same text, same proportions, same colours. The 3D embroidery should be SMALL — a small accent badge, approximately 1/4 to 1/5 the size of a front panel logo. Raised 3D high detail embroidery with visible stitches. Do NOT scale it to fill the back panel.`);
+    logoLines.push(`Image ${imgIndex} is the REAR LOGO...`);
     imgIndex++;
   }
+
   if (s.hasLeft) {
-    logoLines.push(`Image ${imgIndex} is the LEFT SIDE DESIGN. Reproduce it EXACTLY on the visible side mesh panel in foreground — every shape, letter, colour, and detail must match precisely. The 3D embroidery is SEWN OVER THE TOP OF any stripes — the logo sits in the foreground, stripes in the background, partially covered by the embroidery. Raised 3D embroidery with visible stitches. The side design must be embroidered SMALL — approximately 1/3 to 1/3 the size of a front panel logo. Do NOT scale it to fill the mesh panel.`);
+    logoLines.push(`Image ${imgIndex} is the LEFT SIDE DESIGN...`);
     imgIndex++;
   }
 
-  logoLines.push('IMPORTANT: Only place embroidery on the parts of the cap that are visible in Image 1. Do NOT invent a different camera angle. The output must match Image 1\'s exact viewing angle.');
-
-  return [P.subject, P.construction, colourLine, stripeLine, P.embroidery, ...logoLines, P.avoid].filter(Boolean).join(' ');
+  return [
+    ...,
+    `Analyse the logo in Image 2. Based on its colours, style, and brand aesthetic, choose the ideal cap colours...`,
+    'IMPORTANT: Use ONLY the colours from Image 2 (the FRONT logo) when choosing cap colours. Do NOT derive colours from any other logos.',
+    ...
+  ].join(' ');
 }
 
 // ── FRONT VIEW — Auto prompt (Surprise Me) ────────────────────────────────
