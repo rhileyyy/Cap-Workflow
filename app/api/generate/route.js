@@ -125,7 +125,7 @@ const rightLogoLine = s.hasRight
       const type = getLogoType(s.rightLogoName);
       const [min, max] = getOpticalScale(PLACEMENTS.RIGHT.scale, type);
 
-      return `Image 3 is the RIGHT SIDE DESIGN. Place it on the right mesh panel in the rear half, anchored near the front seam, center ~66% from the front seam (back-biased). Vertically centered, bottom just above the stripe with a tight gap (no overlap). Scale ~${Math.round(min*100)}–${Math.round(max*100)}% of panel width for balanced visual weight. Do not touch seams. Raised embroidery over mesh and stripes.`;
+      return `Image 3 is the RIGHT SIDE DESIGN. Place it on the right mesh panel in the rear half, anchored near the front seam, center ~66% from the front seam (back-biased). Vertically centered, bottom overlapping the top stripes. Scale ~${Math.round(min*100)}–${Math.round(max*100)}% of panel width for balanced visual weight. Do not touch seams. Raised embroidery over mesh and stripes.`;
     })()
   : '';
 
@@ -156,7 +156,7 @@ if (s.hasLeft) {
   const [min, max] = getOpticalScale(PLACEMENTS.LEFT.scale, type);
 
   logoLines.push(
-    `Image ${imgIndex} is the LEFT SIDE DESIGN. Place it on the left mesh panel in the rear-lower quadrant, anchored near the rear seam, center ~32% from the rear seam (strong back-bias). Position slightly below vertical center, just above the stripe with a tight gap (no overlap). Scale ~${Math.round(min*100)}–${Math.round(max*100)}% of panel width for balanced visual weight. Do not touch seams. Raised embroidery over mesh, in front of stripes.`
+    `Image ${imgIndex} is the LEFT SIDE DESIGN. Place it on the left mesh panel in the rear-lower quadrant, anchored near the rear seam, center ~32% from the rear seam (strong back-bias). Position slightly below vertical center, bottom overlapping the top stripes. Scale ~${Math.round(min*100)}–${Math.round(max*100)}% of panel width for balanced visual weight. Do not touch seams. Raised embroidery over mesh, in front of stripes.`
   );
   imgIndex++;
 }
