@@ -155,33 +155,44 @@ function describeColor(hex) {
   return hex;
 }
 
-// ── FRONT VIEW — Product prompt (Choose Colours) ──────────────────────────
-// Front 3/4 right angle — shows front panel + RIGHT side
 function buildFrontProductPrompt(s) {
   const P = PROMPT_FRONT;
   const front = describeColor(s.colors.front);
   const mesh  = describeColor(s.colors.mesh);
   const brim  = describeColor(s.colors.brim);
+
   const colourLine = `Change the cap colours: make the front panel ${front}, the mesh ${mesh}, and the brim ${brim}.`
     + (s.sandwichBrim ? ` Add a sandwich brim — a contrasting ${describeColor(s.sandwichColor)} layer visible along the underside edge of the brim.` : '');
+
   const stripeLine = s.stripeCount === 0 ? ''
     : `Change the stripe colour to ${describeColor(s.stripeColor)}. Keep the stripes exactly AS IS in Image 1 — do NOT move them.`;
 
-const rightLogoLine = s.hasRight
-  ? (() => {
-      const type = getLogoType(s.rightLogoName);
-      const [min, max] = getOpticalScale(PLACEMENTS.RIGHT.scale, type);
+  const rightLogoLine = s.hasRight
+    ? (() => {
+        const type = getLogoType(s.rightLogoName);
+        const [min, max] = getOpticalScale(PLACEMENTS.RIGHT.scale, type);
 
-      const v = PLACEMENTS.RIGHT.vertical;
-      const vOffset = getVerticalOffset(type);
+        const v = PLACEMENTS.RIGHT.vertical;
 
-      return `Image 3 is the RIGHT SIDE DESIGN. Place it on the right mesh panel in the rear half, anchored near the front seam, center ~${Math.round(PLACEMENTS.RIGHT.position * 100)}% from the front seam (back-biased).
+        return `Image 3 is the RIGHT SIDE DESIGN. Place it on the right mesh panel in the rear half, anchored near the front seam, center ~${Math.round(PLACEMENTS.RIGHT.position * 100)}% from the front seam (back-biased).
 
 The lower portion of the logo must overlap the stripe band, with approximately ${Math.round(v.overlap[0]*100)}–${Math.round(v.overlap[1]*100)}% of the logo height intersecting the stripes. Vertical placement is relative to the stripe band, not the panel center, with a slight downward bias for visual balance.
 
 Scale ~${Math.round(min*100)}–${Math.round(max*100)}% of panel width. Do not touch seams. Raised embroidery over mesh and stripes.`;
-    })()
-  : '';
+      })()
+    : '';
+
+  return [
+    P.subject,
+    P.construction,
+    colourLine,
+    stripeLine,
+    P.embroidery,
+    P.logoLockdown,
+    rightLogoLine,
+    P.avoid
+  ].filter(Boolean).join(' ');
+}
 
 // ── REAR VIEW — Product prompt (Choose Colours) ──────────────────────────
 // Rear 3/4 left angle — shows rear panel + LEFT side
