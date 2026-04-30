@@ -21,24 +21,44 @@ import sharp from 'sharp';
 // ── Placement + Optical Scaling System ─────────────────────────────
 
 const PLACEMENTS = {
-  FRONT: { width: 0.40, min: 0.38, max: 0.46 },
+  FRONT: {
+    width: 0.40,
+    min: 0.38,
+    max: 0.46,
+  },
 
   LEFT: {
     anchor: 'rear',
-    position: 0.32, // moved back slightly
+    position: 0.32, // horizontal placement (back-biased)
+
+    // ↓ adjusted smaller for rear view balance
     scale: [0.22, 0.30],
+
+    // ↓ NEW: vertical system (stripe-based anchoring)
+    vertical: {
+      overlap: [0.35, 0.45], // % of logo height overlapping stripe
+      baseOffset: -0.05      // slight downward bias from panel center
+    }
   },
 
   RIGHT: {
     anchor: 'front',
     position: 0.66,
+
     scale: [0.32, 0.42],
+
+    vertical: {
+      overlap: [0.35, 0.45],
+      baseOffset: -0.03
+    }
   },
 
   REAR: {
-    scale: [0.2, 0.25],
+    scale: [0.18, 0.22], // slightly reduced as discussed
   }
 };
+
+// ── Logo Type Detection ───────────────────────────────────────────
 
 function getLogoType(name = '') {
   const n = name.toLowerCase();
@@ -50,12 +70,39 @@ function getLogoType(name = '') {
   return 'standard';
 }
 
+// ── Optical Scaling (visual weight balancing) ─────────────────────
+
 function getOpticalScale([min, max], type) {
   switch (type) {
-    case 'script': return [min + 0.04, max + 0.04];
-    case 'compact': return [min - 0.02, max - 0.02];
-    case 'badge': return [min - 0.02, max - 0.02];
-    default: return [min, max];
+    case 'script':
+      return [min + 0.04, max + 0.04]; // thin logos need boost
+
+    case 'compact':
+      return [min - 0.02, max - 0.02]; // prevent heavy look
+
+    case 'badge':
+      return [min - 0.02, max - 0.02];
+
+    default:
+      return [min, max];
+  }
+}
+
+// ── Vertical Offset Adjustment ────────────────────────────────────
+
+function getVerticalOffset(type) {
+  switch (type) {
+    case 'script':
+      return -0.02; // slightly higher
+
+    case 'compact':
+      return -0.08; // sits lower
+
+    case 'badge':
+      return -0.06;
+
+    default:
+      return -0.05;
   }
 }
 
@@ -125,12 +172,16 @@ const rightLogoLine = s.hasRight
       const type = getLogoType(s.rightLogoName);
       const [min, max] = getOpticalScale(PLACEMENTS.RIGHT.scale, type);
 
-      return `Image 3 is the RIGHT SIDE DESIGN. Place it on the right mesh panel in the rear half, anchored near the front seam, center ~66% from the front seam (back-biased). Vertically centered, bottom overlapping the top stripes. Scale ~${Math.round(min*100)}–${Math.round(max*100)}% of panel width for balanced visual weight. Do not touch seams. Raised embroidery over mesh and stripes.`;
+      const v = PLACEMENTS.RIGHT.vertical;
+      const vOffset = getVerticalOffset(type);
+
+      return `Image 3 is the RIGHT SIDE DESIGN. Place it on the right mesh panel in the rear half, anchored near the front seam, center ~${Math.round(PLACEMENTS.RIGHT.position * 100)}% from the front seam (back-biased).
+
+The lower portion of the logo must overlap the stripe band, with approximately ${Math.round(v.overlap[0]*100)}–${Math.round(v.overlap[1]*100)}% of the logo height intersecting the stripes. Vertical placement is relative to the stripe band, not the panel center, with a slight downward bias for visual balance.
+
+Scale ~${Math.round(min*100)}–${Math.round(max*100)}% of panel width. Do not touch seams. Raised embroidery over mesh and stripes.`;
     })()
   : '';
-
-  return [P.subject, P.construction, colourLine, stripeLine, P.embroidery, P.logoLockdown, rightLogoLine, P.avoid].filter(Boolean).join(' ');
-}
 
 // ── REAR VIEW — Product prompt (Choose Colours) ──────────────────────────
 // Rear 3/4 left angle — shows rear panel + LEFT side
@@ -155,9 +206,17 @@ if (s.hasLeft) {
   const type = getLogoType(s.leftLogoName);
   const [min, max] = getOpticalScale(PLACEMENTS.LEFT.scale, type);
 
+  const v = PLACEMENTS.LEFT.vertical;
+  const vOffset = getVerticalOffset(type);
+
   logoLines.push(
-    `Image ${imgIndex} is the LEFT SIDE DESIGN. Place it on the left mesh panel in the rear-lower quadrant, anchored near the rear seam, center ~32% from the rear seam (strong back-bias). Position slightly below vertical center, bottom overlapping the top stripes. Scale ~${Math.round(min*100)}–${Math.round(max*100)}% of panel width for balanced visual weight. Do not touch seams. Raised embroidery over mesh, in front of stripes.`
+    `Image ${imgIndex} is the LEFT SIDE DESIGN. Place it on the left mesh panel in the rear-lower quadrant, anchored near the rear seam, center ~${Math.round(PLACEMENTS.LEFT.position * 100)}% from the rear seam (strong back-bias).
+
+The lower portion of the logo must overlap the stripe band, with approximately ${Math.round(v.overlap[0]*100)}–${Math.round(v.overlap[1]*100)}% of the logo height intersecting the stripes. Vertical placement is determined relative to the stripe band, not the panel center, with a slight downward bias for visual balance.
+
+Scale ~${Math.round(min*100)}–${Math.round(max*100)}% of panel width. Do not touch seams. Raised embroidery over mesh and stripes.`
   );
+
   imgIndex++;
 }
 
@@ -229,12 +288,19 @@ function buildRearAutoPrompt(s) {
   const type = getLogoType(s.leftLogoName);
   const [min, max] = getOpticalScale(PLACEMENTS.LEFT.scale, type);
 
+  const v = PLACEMENTS.LEFT.vertical;
+  const vOffset = getVerticalOffset(type);
+
   logoLines.push(
-    `Image ${imgIndex} is the LEFT SIDE DESIGN. Place it on the left mesh panel in the rear-lower quadrant, anchored near the rear seam, center ~32% from the rear seam. Slightly below vertical center, just above the stripe with a tight gap. Scale ~${Math.round(min*100)}–${Math.round(max*100)}% of panel width. Raised embroidery over mesh, in front of stripes.`
+    `Image ${imgIndex} is the LEFT SIDE DESIGN. Place it on the left mesh panel in the rear-lower quadrant, anchored near the rear seam, center ~${Math.round(PLACEMENTS.LEFT.position * 100)}% from the rear seam (strong back-bias).
+
+The lower portion of the logo must overlap the stripe band, with approximately ${Math.round(v.overlap[0]*100)}–${Math.round(v.overlap[1]*100)}% of the logo height intersecting the stripes. Vertical placement is determined relative to the stripe band, not the panel center, with a slight downward bias for visual balance.
+
+Scale ~${Math.round(min*100)}–${Math.round(max*100)}% of panel width. Do not touch seams. Raised embroidery over mesh and stripes.`
   );
+
   imgIndex++;
 }
-
   return [
     'Edit Image 1, which is a photograph of a blank grey trucker cap from a rear 3/4 left angle (looking at the back from the left side). Keep the EXACT same camera angle, perspective, and composition as Image 1 — do NOT rotate the cap or change the viewing angle. Keep the cap shape, construction, lighting, mesh texture, brim shape, snapback closure, and stripe placement EXACTLY as they are in Image 1. Only make the colour and embroidery changes described below.',
     'Preserve from Image 1 exactly: the mesh panels, snapback closure, brim curve, squatchee button, and any stripe positions. Do not move, add, or remove stripes. No topstitching on the brim. Do NOT rotate the cap to show the front.',
