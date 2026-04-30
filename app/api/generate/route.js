@@ -21,12 +21,12 @@ import sharp from 'sharp';
 // ── Placement + Optical Scaling System ─────────────────────────────
 
 const PLACEMENTS = {
-  FRONT: { width: 0.42, min: 0.38, max: 0.46 },
+  FRONT: { width: 0.40, min: 0.38, max: 0.46 },
 
   LEFT: {
     anchor: 'rear',
     position: 0.32, // moved back slightly
-    scale: [0.28, 0.38],
+    scale: [0.22, 0.30],
   },
 
   RIGHT: {
