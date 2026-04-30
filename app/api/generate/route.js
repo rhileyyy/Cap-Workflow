@@ -174,7 +174,7 @@ function buildRearAutoPrompt(s) {
     imgIndex++;
   }
   if (s.hasLeft) {
-    logoLines.push(`Image ${imgIndex} is the LEFT SIDE DESIGN. Reproduce it EXACTLY on the left side mesh panel. The embroidery is SEWN OVER THE TOP OF any stripes — the logo sits in the foreground, stripes in the background, partially covered by the embroidery. Raised 3D embroidery with visible stitches. The side design must be embroidered SMALL — approximately 1/3 to 1/2 the size of a front panel logo. Do NOT scale it to fill the mesh panel.`);
+    logoLines.push(`Image ${imgIndex} is the LEFT SIDE DESIGN. Reproduce it EXACTLY on the left side mesh panel, positioned on the panel directly forward of the rear seam (closest to the snapback), vertically centered within the mesh height, with the bottom of the embroidery sitting just above the stripe band leaving a small consistent gap (do not overlap the stripe), and horizontally biased slightly toward the rear seam rather than centered; the embroidery is sewn over the mesh and sits visually in front of any stripes; maintain SMALL scale at approximately 1/3 to 1/2 the size of the front panel logo and do NOT scale it to fill the panel; maintain identical placement and scale consistency across all generated views.`
     imgIndex++;
   }
 
