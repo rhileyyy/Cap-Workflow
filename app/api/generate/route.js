@@ -53,7 +53,7 @@ function getLogoType(name = '') {
 function getOpticalScale([min, max], type) {
   switch (type) {
     case 'script': return [min + 0.04, max + 0.04];
-    case 'compact': return [min - 0.03, max - 0.03];
+    case 'compact': return [min - 0.02, max - 0.02];
     case 'badge': return [min - 0.02, max - 0.02];
     default: return [min, max];
   }
