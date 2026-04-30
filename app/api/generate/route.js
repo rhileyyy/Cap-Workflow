@@ -29,7 +29,7 @@ const PLACEMENTS = {
 
   LEFT: {
     anchor: 'rear',
-    position: 0.32, // horizontal placement (back-biased)
+    position: 0.60, // horizontal placement (back-biased)
 
     // ↓ adjusted smaller for rear view balance
     scale: [0.22, 0.30],
