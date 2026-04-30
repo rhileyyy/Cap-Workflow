@@ -116,78 +116,113 @@ function buildRearAutoPrompt(s) {
   ].join(' ');
 }
 
-// ── FRONT VIEW — Auto prompt (Surprise Me) ────────────────────────────────
-// Front 3/4 right angle — shows front panel + RIGHT side
+/* ────────────────────────────────────────────────────────────────
+FRONT VIEW — Auto prompt (Surprise Me)
+Front 3/4 right angle — shows front panel + RIGHT side
+──────────────────────────────────────────────────────────────── */
 function buildFrontAutoPrompt(s) {
-  const directions = [
-    'Choose a bold dark cap with high contrast elements.',
-    'Choose a lighter neutral-toned cap with subtle complementary accents.',
-    'Choose a vibrant colour that echoes a dominant colour from the logo.',
-    'Choose a classic two-tone — contrasting front and mesh colours.',
-    'Choose an understated monochrome with a single accent colour on the stripes.',
-    'Choose a warm earthy palette that complements the logo.',
-    'Choose a cool-toned palette — navy, slate, or grey family.',
-    'Be bold — choose an unexpected but commercially attractive colour combination.',
-  ];
-  const direction = directions[s.variationSeed % directions.length];
+const directions = [
+'Match the primary logo colour closely for a cohesive, branded look.',
+'Use a darker, muted version of the logo colours for a premium feel.',
+'Use a complementary contrasting colour from the logo for a bold, standout cap.',
+'Choose a neutral base (black, navy, grey, or beige) that pairs well with the logo colours.',
+];
 
-  const stripeNote = s.stripeCount > 0
-    ? `The reference cap already has ${s.stripeCount} stripe${s.stripeCount > 1 ? 's' : ''} — keep them exactly where they are and choose a complementary stripe colour.`
-    : 'The reference cap has no stripes — keep it that way.';
+const direction = directions[s.variationSeed % directions.length];
 
-  const rightInstruction = s.hasRight
-    ? `Image 3 is the RIGHT SIDE DESIGN. Reproduce it EXACTLY on the right side mesh panel — every shape, letter, colour, and detail must match precisely. The 3D high detail embroidery is sewn OVER TOP OF any stripes — the logo sits in the foreground, stripes in the background, partially covered by the embroidery. Raised 3D embroidery with visible stitches. The side design must be embroidered SMALL — approximately 1/3 to 1/2 the size of the front panel logo. Do NOT scale it to fill the mesh panel.`
-    : '';
+const stripeNote =
+s.stripeCount > 0
+? `Include ${s.stripeCount} clean, premium stripe(s) on the side panel using a colour derived ONLY from the front logo.`
+: 'Do not include any side stripes.';
 
-  return [
-    'Edit Image 1, which is a photograph of a blank grey trucker cap from a front 3/4 right angle. Keep the cap shape, construction, angle, lighting, mesh texture, brim shape, and stripe placement EXACTLY as they are in Image 1. Only make the colour and embroidery changes described below.',
-    'Preserve from Image 1 exactly: the crown shape, front panel, mesh panels, brim curve, squatchee button, snapback closure, and any stripe positions. Do not move, add, or remove stripes. No topstitching on the brim.',
-    `Analyse the logo in Image 2. Based on its colours, style, and brand aesthetic, choose the ideal cap colours: front panel, mesh, and brim. ${direction} ${stripeNote} Decide whether a sandwich brim would complement the look. Make choices a professional cap designer would make.`,
-    'All logos rendered as 3D high detail embroidery raised above the cap surface. Black outlined embroidery on all positions. Individual thread stitches clearly visible.',
-    'Image 2 is the front logo. Embroider it on the centre of the front panel EXACTLY as shown — same shapes, same text, same proportions, same colours. The embroidery should occupy approximately 40-50% of the front panel width, leaving clear breathing room on all sides. Do NOT redraw, simplify, or substitute any part.',
-    rightInstruction,
-    'Do not change the cap shape or construction. Do NOT move or add stripes to any part of the cap. Do not add topstitching to the brim. Do not add a model or person. Do not change the background.',
-  ].filter(Boolean).join(' ');
+const logoLines = [];
+let imgIndex = 3; // Image 2 = FRONT LOGO
+
+if (s.hasRight) {
+logoLines.push(
+`Image ${imgIndex} is the RIGHT SIDE LOGO. Place it small and clean on the right panel as an accent.`
+);
+imgIndex++;
 }
 
-// ── REAR VIEW — Auto prompt (Surprise Me) ─────────────────────────────────
-// Rear 3/4 left angle — shows rear panel + LEFT side
+return [
+'You are generating a premium custom trucker cap mockup (front 3/4 right view).',
+'The cap must look realistic, production-ready, and high-end.',
+'',
+'Image 1 is the blank cap.',
+'Image 2 is the FRONT LOGO.',
+...logoLines,
+'',
+'Analyse the logo in Image 2. Based on its colours, style, and brand aesthetic, choose the ideal cap colours.',
+'IMPORTANT: Use ONLY the colours from Image 2 (the FRONT logo). Do NOT derive colours from any other logos.',
+direction,
+'',
+stripeNote,
+'',
+'Ensure all panels (front, mesh, brim) follow a cohesive and consistent colour palette.',
+'The colour palette must remain IDENTICAL between all views generated for this cap.',
+'',
+'Lighting should be studio-quality with soft shadows and realistic fabric texture.',
+'Maintain correct embroidery depth, stitching realism, and material separation.',
+].join(' ');
+}
+
+/* ────────────────────────────────────────────────────────────────
+REAR VIEW — Auto prompt (Surprise Me)
+Rear 3/4 left angle — shows rear panel + LEFT side
+──────────────────────────────────────────────────────────────── */
 function buildRearAutoPrompt(s) {
-  const directions = [
-    'Choose a bold dark cap with high contrast elements.',
-    'Choose a lighter neutral-toned cap with subtle complementary accents.',
-    'Choose a vibrant colour that echoes a dominant colour from the logo.',
-    'Choose a classic two-tone — contrasting front and mesh colours.',
-    'Choose an understated monochrome with a single accent colour on the stripes.',
-    'Choose a warm earthy palette that complements the logo.',
-    'Choose a cool-toned palette — navy, slate, or grey family.',
-    'Be bold — choose an unexpected but commercially attractive colour combination.',
-  ];
-  const direction = directions[s.variationSeed % directions.length];
+const directions = [
+'Match the primary logo colour closely for a cohesive, branded look.',
+'Use a darker, muted version of the logo colours for a premium feel.',
+'Use a complementary contrasting colour from the logo for a bold, standout cap.',
+'Choose a neutral base (black, navy, grey, or beige) that pairs well with the logo colours.',
+];
 
-  const stripeNote = s.stripeCount > 0
-    ? `The reference cap already has ${s.stripeCount} stripe${s.stripeCount > 1 ? 's' : ''} — keep them exactly where they are and choose a complementary stripe colour.`
-    : 'The reference cap has no stripes — keep it that way.';
+const direction = directions[s.variationSeed % directions.length];
 
-  const logoLines = [];
-  let imgIndex = 2;
-  if (s.hasRear) {
-    logoLines.push(`Image ${imgIndex} is the REAR LOGO. Embroider it on the centre back of the cap above the snapback closure. The embroidery should be SMALL — a small accent badge. Raised 3D high detail embroidery with visible stitches. Do NOT scale it to fill the back panel.`);
-    imgIndex++;
-  }
-  if (s.hasLeft) {
-    logoLines.push(`Image ${imgIndex} is the LEFT SIDE DESIGN. Reproduce it EXACTLY on the left side mesh panel. The embroidery is SEWN OVER THE TOP OF any stripes — the logo sits in the foreground, stripes in the background, partially covered by the embroidery. Raised 3D embroidery with visible stitches. The side design must be embroidered SMALL — approximately 1/3 to 1/2 the size of a front panel logo. Do NOT scale it to fill the mesh panel.`);
-    imgIndex++;
-  }
+const stripeNote =
+s.stripeCount > 0
+? `Include ${s.stripeCount} clean, premium stripe(s) on the side panel using a colour derived ONLY from the front logo.`
+: 'Do not include any side stripes.';
 
-  return [
-    'Edit Image 1, which is a photograph of a blank grey trucker cap from a rear 3/4 left angle (looking at the back from the left side). Keep the EXACT same camera angle, perspective, and composition as Image 1 — do NOT rotate the cap or change the viewing angle. Keep the cap shape, construction, lighting, mesh texture, brim shape, snapback closure, and stripe placement EXACTLY as they are in Image 1. Only make the colour and embroidery changes described below.',
-    'Preserve from Image 1 exactly: the mesh panels, snapback closure, brim curve, squatchee button, and any stripe positions. Do not move, add, or remove stripes. No topstitching on the brim. Do NOT rotate the cap to show the front.',
-    `Analyse the logo in Image 2. Based on its colours, style, and brand aesthetic, choose the ideal cap colours: front panel, mesh, and brim. ${direction} ${stripeNote} Make choices a professional cap designer would make.`,
-    'All logos rendered as 3D high detail embroidery raised above the cap surface. Black outlined embroidery on all positions. Individual thread stitches clearly visible.',
-    ...logoLines,
-    'Do not change the cap shape or construction. Do not change the camera angle or rotate the cap. Do not move or add stripes. Do not add stripes to the brim. Do not add topstitching to the brim. Do not add a model or person. Do not change the background. Do NOT place any embroidery on the right side of the cap — the right side is not visible from this rear 3/4 left angle.',
-  ].filter(Boolean).join(' ');
+const logoLines = [];
+let imgIndex = 3; // Image 2 = FRONT LOGO
+
+if (s.hasRear) {
+logoLines.push(
+`Image ${imgIndex} is the REAR LOGO. Place it cleanly on the rear panel with correct embroidery scaling and alignment.`
+);
+imgIndex++;
+}
+
+if (s.hasLeft) {
+logoLines.push(
+`Image ${imgIndex} is the LEFT SIDE LOGO. Place it small and clean on the left panel as an accent.`
+);
+imgIndex++;
+}
+
+return [
+'You are generating a premium custom trucker cap mockup (rear 3/4 left view).',
+'The cap must look realistic, production-ready, and high-end.',
+'',
+'Image 1 is the blank cap.',
+'Image 2 is the FRONT LOGO.',
+...logoLines,
+'',
+'Analyse the logo in Image 2. Based on its colours, style, and brand aesthetic, choose the ideal cap colours.',
+'IMPORTANT: Use ONLY the colours from Image 2 (the FRONT logo). Do NOT derive colours from any other logos.',
+direction,
+'',
+stripeNote,
+'',
+'Ensure all panels (front, mesh, brim) follow a cohesive and consistent colour palette.',
+'The colour palette must remain IDENTICAL between all views generated for this cap.',
+'',
+'Lighting should be studio-quality with soft shadows and realistic fabric texture.',
+'Maintain correct embroidery depth, stitching realism, and material separation.',
+].join(' ');
 }
 
 
