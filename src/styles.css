@@ -1,0 +1,369 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * Design system definition.
+ *
+ * The @theme inline block maps CSS custom properties to Tailwind utility
+ * classes (e.g. --color-primary -> bg-primary, text-primary).
+ *
+ * The :root and .dark blocks define the actual color values using oklch.
+ * All colors MUST use oklch format.
+ *
+ * To add a new semantic color:
+ * 1. Add the variable to :root (light value) and .dark (dark value)
+ * 2. Register it in @theme inline as --color-<name>: var(--<name>)
+ */
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --radius-4xl: calc(var(--radius) + 16px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-ring-offset-background: var(--background);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+:root {
+  --radius: 0.625rem;
+  /* Warm tan / cream palette — Image Merch aesthetic */
+  --background: oklch(0.949 0.03 92.32); /* #F5EED8 warm cream */
+  --foreground: oklch(0.248 0.033 77.16); /* #2A1F0E dark brown */
+  --card: oklch(0.974 0.014 88.68); /* #FAF6EC soft cream */
+  --card-foreground: oklch(0.248 0.033 77.16);
+  --popover: oklch(0.974 0.014 88.68);
+  --popover-foreground: oklch(0.248 0.033 77.16);
+  --primary: oklch(0.713 0.097 70.82); /* #C9985C warm tan/gold */
+  --primary-foreground: oklch(0.248 0.033 77.16);
+  --secondary: oklch(0.931 0.026 90.1); /* #EFE8D5 sandy secondary */
+  --secondary-foreground: oklch(0.248 0.033 77.16);
+  --muted: oklch(0.905 0.032 89.15); /* #E8DFC8 sandy muted */
+  --muted-foreground: oklch(0.536 0.038 77.25); /* #7A6B55 warm brown */
+  --accent: oklch(0.713 0.097 70.82); /* warm tan */
+  --accent-foreground: oklch(0.248 0.033 77.16);
+  --destructive: oklch(0.599 0.137 31.48); /* #C45C4A warm red */
+  --destructive-foreground: oklch(0.949 0.03 92.32);
+  --border: oklch(0.838 0.036 87.08); /* #D4C9B0 warm border */
+  --input: oklch(0.838 0.036 87.08);
+  --ring: oklch(0.713 0.097 70.82); /* gold focus ring */
+  --chart-1: oklch(0.713 0.097 70.82);
+  --chart-2: oklch(0.65 0.12 45);
+  --chart-3: oklch(0.55 0.08 140);
+  --chart-4: oklch(0.82 0.14 80);
+  --chart-5: oklch(0.6 0.1 60);
+  --sidebar: oklch(0.931 0.026 90.1);
+  --sidebar-foreground: oklch(0.248 0.033 77.16);
+  --sidebar-primary: oklch(0.713 0.097 70.82);
+  --sidebar-primary-foreground: oklch(0.248 0.033 77.16);
+  --sidebar-accent: oklch(0.931 0.026 90.1);
+  --sidebar-accent-foreground: oklch(0.248 0.033 77.16);
+  --sidebar-border: oklch(0.838 0.036 87.08);
+  --sidebar-ring: oklch(0.713 0.097 70.82);
+}
+
+.dark {
+  /* Lucky Inger brand: dark navy/black background, gold accent, white text. */
+  --background: oklch(0.145 0.005 270); /* #0D0D0F */
+  --foreground: oklch(1 0 0); /* white */
+  --card: oklch(0.19 0.005 270); /* #18181B */
+  --card-foreground: oklch(1 0 0);
+  --popover: oklch(0.19 0.005 270);
+  --popover-foreground: oklch(1 0 0);
+  --primary: oklch(0.72 0.105 70); /* gold #C9985C */
+  --primary-foreground: oklch(0.145 0.005 270);
+  --secondary: oklch(0.24 0.005 270);
+  --secondary-foreground: oklch(1 0 0);
+  --muted: oklch(0.22 0.005 270);
+  --muted-foreground: oklch(0.7 0.01 270);
+  --accent: oklch(0.72 0.105 70); /* gold */
+  --accent-foreground: oklch(0.145 0.005 270);
+  --destructive: oklch(0.6 0.22 27);
+  --destructive-foreground: oklch(1 0 0);
+  --border: oklch(1 0 0 / 20%);
+  --input: oklch(1 0 0 / 22%);
+  --ring: oklch(0.72 0.105 70); /* gold focus ring */
+  --chart-1: oklch(0.72 0.105 70);
+  --chart-2: oklch(0.6 0.118 184.704);
+  --chart-3: oklch(0.5 0.07 227);
+  --chart-4: oklch(0.82 0.16 84);
+  --chart-5: oklch(0.65 0.19 70);
+  --sidebar: oklch(0.19 0.005 270);
+  --sidebar-foreground: oklch(1 0 0);
+  --sidebar-primary: oklch(0.72 0.105 70);
+  --sidebar-primary-foreground: oklch(0.145 0.005 270);
+  --sidebar-accent: oklch(0.24 0.005 270);
+  --sidebar-accent-foreground: oklch(1 0 0);
+  --sidebar-border: oklch(1 0 0 / 12%);
+  --sidebar-ring: oklch(0.72 0.105 70);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+  }
+}
+
+@keyframes module-flicker {
+  0%,
+  100% {
+    opacity: 1;
+    box-shadow: 0 0 0 0 rgba(255, 165, 0, 0);
+  }
+  20%,
+  60% {
+    opacity: 0.4;
+    box-shadow: 0 0 0 4px rgba(255, 165, 0, 0.6);
+  }
+  40%,
+  80% {
+    opacity: 1;
+    box-shadow: 0 0 0 4px rgba(255, 165, 0, 0.95);
+  }
+}
+
+.module-flicker {
+  animation: module-flicker 1.1s ease-in-out 2;
+  border-radius: 0.75rem;
+}
+
+.no-save-img {
+  -webkit-user-drag: none;
+  user-select: none;
+  pointer-events: none;
+}
+
+@keyframes generate-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 hsl(var(--primary) / 0%);
+  }
+  50% {
+    box-shadow: 0 0 0 8px hsl(var(--primary) / 25%);
+  }
+}
+.generate-pulse {
+  animation: generate-pulse 1.8s ease-in-out 4;
+}
+
+@keyframes preview-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.preview-enter {
+  animation: preview-enter 0.3s ease;
+}
+
+@keyframes guide-panel-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-6px);
+  }
+  40% {
+    transform: translateX(6px);
+  }
+  60% {
+    transform: translateX(-4px);
+  }
+  80% {
+    transform: translateX(4px);
+  }
+}
+.guide-panel-shake {
+  animation: guide-panel-shake 0.4s ease;
+}
+
+@keyframes guide-pulse-dot {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.4;
+    transform: scale(0.7);
+  }
+}
+.guide-pulse-dot {
+  animation: guide-pulse-dot 1.5s ease infinite;
+}
+
+.guide-step-exit {
+  opacity: 0;
+  transform: translateY(-4px);
+  transition:
+    opacity 0.1s ease,
+    transform 0.1s ease;
+}
+.guide-step-enter {
+  opacity: 1;
+  transform: translateY(0);
+  transition:
+    opacity 0.15s ease,
+    transform 0.15s ease;
+}
+
+/*
+ * Embed mode (Shopify iframe). Activated by useEmbedAutoResize, which sets
+ * data-embed="1" on <body>. The iframe is sized by the parent (Shopify
+ * section), so we fill the iframe and scroll internally — never lock
+ * overflow on <html>, that breaks scrolling when the host doesn't auto-resize.
+ */
+html:has(body[data-embed="1"]),
+body[data-embed="1"] {
+  height: 100%;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+}
+body[data-embed="1"] {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+}
+/* Hide chrome that doesn't belong inside an embedded surface. */
+body[data-embed="1"] [data-embed-hide],
+body[data-embed="1"] footer[data-app-footer] {
+  display: none !important;
+}
+/* Embedded in Shopify: keep wheel/touch scroll inside the app —
+   prevents scroll chaining to the parent page at scroll bounds. */
+body[data-embed="1"] {
+  overscroll-behavior-y: contain;
+}
+/* =============================================================
+   ONE-SCROLLBAR LAYOUT — desktop only. The preview column pins,
+   its media scales to fit the viewport, and the page scroll is
+   the only scrollbar. Below `lg` (mobile / tablet) no height lock
+   is applied — the column flows naturally at full width and cards
+   use their intrinsic aspect ratios.
+
+   The generated image and the colour-layout template are the two
+   media surfaces that must never be clipped. Both are matched with
+   `:has()` so history thumbnails (nested inside grids) are left
+   alone. The generated image wrapper drops its fixed square, fills
+   the shrinking flex space, and uses `object-contain` so the image
+   scales DOWN to whatever height is available.
+   ============================================================= */
+@media (min-width: 1024px) {
+  .preview-col {
+    position: sticky;
+    top: 5rem;
+    align-self: flex-start;
+    max-height: calc(100vh - 5.5rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    padding-right: 0.25rem;
+  }
+
+  /* Generated-image wrapper (the aspect-square div that holds the
+     main <img>/GeneratingSkeleton). Detected via the object-contain
+     class on the primary <img> — history thumbnails use object-cover
+     so are unaffected. Aspect ratio is dropped; the wrapper claims
+     up to 60vh and the image fills it with object-contain, never
+     cropping. */
+  .preview-col .aspect-square:has(> .no-save-img.object-contain),
+  .preview-col .aspect-square:has(> div > .no-save-img.object-contain) {
+    aspect-ratio: auto;
+    height: min(48vh, 560px);
+    min-height: 12rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-inline: auto;
+  }
+  .preview-col .aspect-square:has(> .no-save-img.object-contain) > *,
+  .preview-col .aspect-square:has(> div > .no-save-img.object-contain) > * {
+    height: 100%;
+    width: 100%;
+  }
+  .preview-col .aspect-square:has(.no-save-img.object-contain) .no-save-img {
+    height: 100%;
+    width: 100%;
+    object-fit: contain !important;
+  }
+
+  /* Colour-layout template stage wrapper. The SVG scales via its
+     viewBox — capping the wrapper's max-height + auto width lets
+     the SVG shrink proportionally instead of overflowing its card. */
+  .preview-col .max-w-\[420px\] {
+    max-width: min(420px, 40vh);
+    width: 100%;
+    margin-inline: auto;
+  }
+  .preview-col .max-w-\[420px\] svg {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  /* Generate button row: pinned to the bottom of the scrolling preview
+     column so it is ALWAYS visible, however tall the generation stack
+     gets. Targets the row via its Generate button (min-w-32) or the
+     explicit .generate-row wrapper (cap builder). */
+  .preview-col .generate-row {
+    position: sticky;
+    bottom: 0;
+    z-index: 5;
+    background: hsl(var(--card));
+    padding-block: 0.5rem;
+    margin-top: 1rem;
+  }
+  .preview-col div:has(> button.min-w-32) {
+    position: sticky;
+    bottom: 0;
+    z-index: 5;
+    background: hsl(var(--background));
+    padding-block: 0.5rem;
+  }
+}
